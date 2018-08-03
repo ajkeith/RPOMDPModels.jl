@@ -1,7 +1,7 @@
 module RPOMDPModels
 
 using RPOMDPs
-using POMDPToolbox
+using RPOMDPToolbox
 using Distributions
 using StaticArrays
 using AutoHashEquals
@@ -39,9 +39,6 @@ export
     state_index,
     action_index,
     observation_index,
-    states,
-    actions,
-    observations,
     observation,
     reward,
     transition

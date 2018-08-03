@@ -18,9 +18,9 @@ Baby3RPOMDP() = Baby3RPOMDP(-5.0, -10.0, 0.9)
 # start knowing baby is not not hungry
 initial_state_distribution(::Baby3RPOMDP) = BoolDistribution(0.0)
 
-const states = [true, false] # hungry, full
-const actions = [true, false] # feed, no action
-const observations = [:quiet, :crying, :yelling]
+const states_const = [true, false] # hungry, full
+const actions_const = [true, false] # feed, no action
+const observations_const = [:quiet, :crying, :yelling]
 
 n_states(::Baby3RPOMDP) = 2
 state_index(::Baby3RPOMDP, s::Bool) = s ? 1 : 2
