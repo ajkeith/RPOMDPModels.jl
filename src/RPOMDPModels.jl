@@ -15,6 +15,7 @@ import Base.==
 import Base.hash
 
 import RPOMDPs: initial_state, generate_s, generate_o, generate_sor
+import RPOMDPs: observation
 
 include("BabyRPOMDP.jl")
 export

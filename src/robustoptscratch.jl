@@ -1,9 +1,3 @@
-# # using Revise # in REPL
-# Pkg.clone("https://github.com/ajkeith/POMDPs.jl")
-# Pkg.clone("https://github.com/ajkeith/POMDPModels.jl")
-# Pkg.checkout("POMDPModels","ajk/robust")
-push!(LOAD_PATH,"C:\\Users\\op\\Documents\\Julia Projects\\RPOMDPs.jl\\src")
-push!(LOAD_PATH,"C:\\Users\\op\\Documents\\Julia Projects\\RPOMDPModels.jl\\src")
 using RPOMDPs
 using RPOMDPModels
 # using POMDPToolbox
@@ -35,6 +29,7 @@ mlp = Model(solver = ClpSolver())
 solve(mlp)
 argmin_mlp = getvalue(p)
 obj_mlp = getobjectivevalue(mlp)
+
 
 # P-box (4 vertices)
 mpb = Model(solver = ClpSolver())
