@@ -33,6 +33,13 @@ export
     # AlwaysFeed,
     # FeedWhenCrying
 
+include("Baby3RrhoPOMDP.jl")
+export
+    Baby3RrhoPOMDP
+    # Starve,
+    # AlwaysFeed,
+    # FeedWhenCrying
+
 export
     n_states,
     n_actions,
