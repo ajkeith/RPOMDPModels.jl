@@ -2,7 +2,7 @@ module RPOMDPModels
 
 using RPOMDPs
 using RPOMDPToolbox
-using Distributions
+using Distributions, SimpleProbabilitySets
 using StaticArrays
 using AutoHashEquals
 using StatsBase
@@ -17,28 +17,35 @@ import Base.hash
 import RPOMDPs: initial_state, generate_s, generate_o, generate_sor
 import RPOMDPs: observation
 
-include("BabyRPOMDP.jl")
+# include("BabyRPOMDP.jl")
+# export
+#     BabyRPOMDP,
+#     BabyBeliefUpdater,
+#     Starve,
+#     AlwaysFeed,
+#     FeedWhenCrying
+#
+# include("Baby3RPOMDP.jl")
+# export
+#     Baby3RPOMDP,
+#     Baby3BeliefUpdater
+#     # Starve,
+#     # AlwaysFeed,
+#     # FeedWhenCrying
+#
+# include("Baby3RrhoPOMDP.jl")
+# export
+#     Baby3RrhoPOMDP
+#     # Starve,
+#     # AlwaysFeed,
+#     # FeedWhenCrying
+
+include("CryingBabyRobust.jl")
 export
+    BabyPOMDP,
     BabyRPOMDP,
-    BabyBeliefUpdater,
-    Starve,
-    AlwaysFeed,
-    FeedWhenCrying
-
-include("Baby3RPOMDP.jl")
-export
-    Baby3RPOMDP,
-    Baby3BeliefUpdater
-    # Starve,
-    # AlwaysFeed,
-    # FeedWhenCrying
-
-include("Baby3RrhoPOMDP.jl")
-export
-    Baby3RrhoPOMDP
-    # Starve,
-    # AlwaysFeed,
-    # FeedWhenCrying
+    BabyIPOMDP,
+    BabyRIPOMDP
 
 export
     n_states,
@@ -48,7 +55,11 @@ export
     action_index,
     observation_index,
     observation,
+    dynamics,
     reward,
-    transition
+    rewardalpha,
+    transition,
+    observation,
+    action
 
 end # module
