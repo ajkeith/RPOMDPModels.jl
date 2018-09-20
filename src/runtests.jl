@@ -43,6 +43,18 @@ using RPOMDPs, RPOMDPModels
     @test reward(rp, :hungry, :feed) == -15
     @test reward(ip, [0.2, 0.8], :feed) ≈ 0.6 atol = 1e-6
     @test reward(rip, [0.2, 0.8], :feed) ≈ 0.6 atol = 1e-6
+
+    # generate samples
+    p = BabyPOMDP()
+    rp = BabyRPOMDP()
+    b = [0.8, 0.2]
+    s = :hungry
+    a = :nothing
+    rng = MersenneTwister(20348)
+    @test RPOMDPModels.psample(observation(rip, :nothing, :full)...) |> sum ≈ 1.0 atol = 1e-6
+    @test generate_sor(p, b, s, a, rng)[2] == :crying
+    @test generate_sor(rp, b, s, a, rng)[2] == :crying
+
 end
 
 # @testset "RobustBelief" begin

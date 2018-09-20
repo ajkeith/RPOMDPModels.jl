@@ -184,7 +184,7 @@ function reward(prob::Union{BabyPOMDP, BabyRPOMDP}, s::Symbol, a::Symbol)
     end
     return r
 end
-reward(prob::Union{BabyPOMDP,BabyRPOMDP}, s::Symbol, a::Symbol, sp::Symbol) = reward(prob,s,a)
+reward(prob::Union{BabyPOMDP,BabyRPOMDP}, b::Vector{Float64}, s::Symbol, a::Symbol, sp::Symbol) = reward(prob,s,a)
 
 function reward(prob::Union{BabyIPOMDP, BabyRIPOMDP}, b::Vector{Float64}, a::Symbol)
     rmax = -Inf
@@ -193,6 +193,7 @@ function reward(prob::Union{BabyIPOMDP, BabyRIPOMDP}, b::Vector{Float64}, a::Sym
     end
     rmax
 end
+reward(prob::Union{BabyIPOMDP,BabyRIPOMDP}, b::Vector{Float64}, s::Symbol, a::Symbol, sp::Symbol) = reward(prob,b,a)
 
 function rewardalpha(prob::Union{BabyIPOMDP, BabyRIPOMDP}, b::Vector{Float64}, a::Symbol)
     rmax = -Inf
@@ -215,33 +216,42 @@ function initial_state(prob::Union{BabyPOMDP,BabyIPOMDP,BabyRPOMDP,BabyRIPOMDP},
     return rand(rng, d)
 end
 
-function generate_s(prob::Union{BabyPOMDP,BabyIPOMDP}, s, a, rng::AbstractRNG)
-    td = transition(prob, s, a)
-    return rand(rng, td)
-end
-
-function generate_o(prob::BabyPOMDP, s, a, sp, rng::AbstractRNG)
-    od = observation(prob, a, sp)
-    return rand(rng, od)
-end
-
-function generate_so(prob::BabyPOMDP, s, a, rng::AbstractRNG)
-    sp = generate_s(prob, s, a, rng)
-    return sp, generate_o(prob, s, a, sp, rng)
-end
-
-function generate_sr(prob::BabyPOMDP, s, a, rng::AbstractRNG)
-    sp = generate_s(prob, s, a, rng)
-    return sp, reward(prob, s, a, sp)
-end
-
-function generate_or(prob::BabyPOMDP, s, a, sp, rng::AbstractRNG)
-    o = generate_o(prob, s, a, sp, rng)
-    return o, reward(p, s, a, sp)
-end
-
-function generate_sor(prob::BabyPOMDP, s, a, rng::AbstractRNG)
-    sp, r = generate_sr(prob, s, a, rng)
-    o = generate_o(prob, s, a, sp, rng)
+function generate_sor(prob::Union{BabyPOMDP,BabyIPOMDP}, b, s, a, rng::AbstractRNG)
+    sp = rand(rng, transition(prob, s, a))
+    o = rand(rng, observation(prob, a, sp))
+    r = reward(prob, b, s, a, sp)
     sp, o, r
+end
+
+function generate_sor(prob::Union{BabyRPOMDP,BabyRIPOMDP}, b, s, a, rng::AbstractRNG)
+    tdist = SparseCat(states(prob), psample(transition(prob, s, a)...))
+    sp = rand(rng, tdist)
+    odist = SparseCat(observations(prob), psample(observation(prob, a, sp)...))
+    o = rand(rng, odist)
+    r = reward(prob, b, s, a, sp)
+    sp, o, r
+end
+
+function psample(plower::Vector{Float64}, pupper::Vector{Float64})
+    n = length(plower)
+    A = zeros(Float64, 2n+1, n)
+    for i = 1:n
+        A[2i - 1,i] = 1.0
+        A[2i, i] = -1.0
+    end
+    A[end,:] = ones(n)
+    bc = Array{Float64}(2n+1)
+    for i = 1:n
+        bc[2i - 1] = pupper[i]
+        bc[2i] = plower[i]
+    end
+    bc[end] = 1.0
+    d = vcat(fill("<=", 2n),"=")
+    nsample = 1
+    rout = R"""
+    library(hitandrun)
+    constr <- list(constr = $A, rhs = $bc, dir = $d)
+    samples <- hitandrun(constr, n.samples = $nsample, thin = ($n) ^ 3)
+    """
+    p = reshape(rcopy(rout), n)
 end

@@ -6,6 +6,7 @@ using Distributions, SimpleProbabilitySets
 using StaticArrays
 using AutoHashEquals
 using StatsBase
+using RCall
 
 importall RPOMDPs
 
