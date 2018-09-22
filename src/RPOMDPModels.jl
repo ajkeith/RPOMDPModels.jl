@@ -61,6 +61,7 @@ export
     rewardalpha,
     transition,
     observation,
-    action
+    action,
+    initial_belief
 
 end # module

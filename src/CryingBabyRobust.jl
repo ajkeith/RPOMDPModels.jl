@@ -44,11 +44,17 @@ const ralphas2 = [ra21, ra22, ra23, ra24, 1-ra24, 1-ra23, 1-ra22, 1-ra21]
 
 BabyPOMDP(r_feed, r_hungry) = BabyPOMDP(r_feed, r_hungry, 0.9)
 BabyPOMDP() = BabyPOMDP(-5.0, -10.0, 0.9)
+
 BabyRPOMDP(r_feed, r_hungry) = BabyRPOMDP(r_feed, r_hungry, 0.9, 0.025)
+BabyRPOMDP(err) = BabyRPOMDP(-5.0, -10.0, 0.9, err)
 BabyRPOMDP() = BabyRPOMDP(-5.0, -10.0, 0.9, 0.025)
+
 BabyIPOMDP(r_feed, r_hungry) = BabyIPOMDP(r_feed, r_hungry, 0.9, ralphas1)
+BabyIPOMDP(alphas) = BabyIPOMDP(-5.0, -10.0, 0.9, alphas)
 BabyIPOMDP() = BabyIPOMDP(-5.0, -10.0, 0.9, ralphas1)
+
 BabyRIPOMDP(r_feed, r_hungry) = BabyRIPOMDP(r_feed, r_hungry, 0.9, 0.025, ralphas1)
+BabyRIPOMDP(err::Float64, alphas::Vector{Vector{Float64}}) = BabyRIPOMDP(-5.0, -10.0, 0.9, err, alphas)
 BabyRIPOMDP() = BabyRIPOMDP(-5.0, -10.0, 0.9, 0.025, ralphas1)
 
 states(::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}) = states_const
@@ -66,10 +72,12 @@ obs_index(prob::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}, z::Symbol
 
 # start knowing baby is not not hungry
 initial_state_distribution(::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}) = SparseCat([:hungry, :full], [0.0, 1.0])
+initial_belief(::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}) = [0.0, 1.0]
 
 # Nominal transition function distributions
+const pϵ = 1e-6
 const t_dist = [SparseCat([:hungry, :full], [0.0, 1.0]) SparseCat([:hungry, :full], [1.0, 0.0]);
-                    SparseCat([:hungry, :full], [0.0, 1.0]) SparseCat([:hungry, :full], [0.1, 1.0])]
+                    SparseCat([:hungry, :full], [0.0, 1.0]) SparseCat([:hungry, :full], [0.1, 0.9])]
 
 # Nominal transition function array t_array[s,a,s'] = Pr(s' | s ,a)
 const t_1 = [0.0 1.0; 0.0 0.1] # P(hungry | s, a)
@@ -89,14 +97,14 @@ transition(prob::Union{BabyIPOMDP, BabyPOMDP}, s::Symbol, a::Symbol, sp::Symbol)
 # PtLower = Plower(t|s,a) = t_lower[s,a,sp]
 function transition(prob::Union{BabyRPOMDP, BabyRIPOMDP}, s::Symbol, a::Symbol)
     si, ai = state_index(prob, s), action_index(prob, a)
-    plower = max.(t_array[si,ai,:] - prob.usize, 0.0)
-    pupper = min.(t_array[si,ai,:] + prob.usize, 1.0)
+    plower = max.(t_array[si,ai,:] - prob.usize, 0.0 + pϵ)
+    pupper = min.(t_array[si,ai,:] + prob.usize, 1.0 - pϵ)
     plower, pupper
 end
 function transition(prob::Union{BabyRPOMDP, BabyRIPOMDP}, s::Symbol, a::Symbol, sp::Symbol)
     si, ai, spi = state_index(prob, s), action_index(prob, a), state_index(prob, sp)
-    plower = max.(t_array[si, ai, spi] - prob.usize, 0.0)
-    pupper = min.(t_array[si, ai, spi] + prob.usize, 1.0)
+    plower = max.(t_array[si, ai, spi] - prob.usize, 0.0 + pϵ)
+    pupper = min.(t_array[si, ai, spi] + prob.usize, 1.0 - pϵ)
     plower, pupper
 end
 
@@ -124,14 +132,14 @@ observation(prob::Union{BabyIPOMDP, BabyPOMDP}, a::Symbol, sp::Symbol, z::Symbol
 # PzLower = Plower(z|s,a,t) = o_lower[a,sp,z]
 function observation(prob::Union{BabyRPOMDP, BabyRIPOMDP}, a::Symbol, sp::Symbol)
     ai, spi = action_index(prob, a), state_index(prob, sp)
-    plower = max.(o_array[ai,spi,:] - prob.usize, 0.0)
-    pupper = min.(o_array[ai,spi,:] + prob.usize, 1.0)
+    plower = max.(o_array[ai,spi,:] - prob.usize, 0.0 + pϵ)
+    pupper = min.(o_array[ai,spi,:] + prob.usize, 1.0 - pϵ)
     plower, pupper
 end
 function observation(prob::Union{BabyRPOMDP, BabyRIPOMDP}, a::Symbol, sp::Symbol, z::Symbol)
     ai, spi, zi = action_index(prob, a), state_index(prob, sp), observation_index(prob, z)
-    plower = max.(o_array[ai, spi, zi] - prob.usize, 0.0)
-    pupper = min.(o_array[ai, spi, zi] + prob.usize, 1.0)
+    plower = max.(o_array[ai, spi, zi] - prob.usize, 0.0 + pϵ)
+    pupper = min.(o_array[ai, spi, zi] + prob.usize, 1.0 - pϵ)
     plower, pupper
 end
 
