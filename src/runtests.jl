@@ -51,18 +51,6 @@ using RPOMDPs, RPOMDPModels
     s = :hungry
     a = :nothing
     rng = MersenneTwister(20348)
-    @test RPOMDPModels.psample(observation(rip, :nothing, :full)...) |> sum ≈ 1.0 atol = 1e-6
     @test generate_sor(p, b, s, a, rng)[2] == :crying
     @test generate_sor(rp, b, s, a, rng)[2] == :crying
-
 end
-
-# @testset "RobustBelief" begin
-#     # constructor
-#     rp = Baby3RPOMDP()
-#     uniform_belief(rp)
-#     @test b == vec
-#
-#     # belief Updater
-#     @test update_belief(prob, true, true, b) == new_vec
-# end

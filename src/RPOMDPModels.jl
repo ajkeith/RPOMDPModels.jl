@@ -48,6 +48,13 @@ export
     BabyIPOMDP,
     BabyRIPOMDP
 
+include("TigerRobust.jl")
+export
+    TigerPOMDP,
+    TigerRPOMDP,
+    TigerIPOMDP,
+    TigerRIPOMDP
+
 export
     n_states,
     n_actions,
