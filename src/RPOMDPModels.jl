@@ -18,29 +18,6 @@ import Base.hash
 import RPOMDPs: initial_state, generate_s, generate_o, generate_sor
 import RPOMDPs: observation
 
-# include("BabyRPOMDP.jl")
-# export
-#     BabyRPOMDP,
-#     BabyBeliefUpdater,
-#     Starve,
-#     AlwaysFeed,
-#     FeedWhenCrying
-#
-# include("Baby3RPOMDP.jl")
-# export
-#     Baby3RPOMDP,
-#     Baby3BeliefUpdater
-#     # Starve,
-#     # AlwaysFeed,
-#     # FeedWhenCrying
-#
-# include("Baby3RrhoPOMDP.jl")
-# export
-#     Baby3RrhoPOMDP
-#     # Starve,
-#     # AlwaysFeed,
-#     # FeedWhenCrying
-
 include("CryingBabyRobust.jl")
 export
     BabyPOMDP,
@@ -69,6 +46,8 @@ export
     transition,
     observation,
     action,
-    initial_belief
+    initial_belief,
+    generate_sor,
+    initial_state_distribution
 
 end # module
