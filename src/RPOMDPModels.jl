@@ -18,12 +18,17 @@ import Base.hash
 import RPOMDPs: initial_state, generate_s, generate_o, generate_sor
 import RPOMDPs: observation
 
-include("CryingBabyRobust.jl")
+include("BabyRobust.jl")
 export
     BabyPOMDP,
     BabyRPOMDP,
     BabyIPOMDP,
     BabyRIPOMDP
+
+include("BabyRobustInfo.jl")
+export
+    BabyInfoPOMDP,
+    BabyInfoRPOMDP
 
 include("TigerRobust.jl")
 export

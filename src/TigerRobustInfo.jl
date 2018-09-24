@@ -37,7 +37,6 @@ action_index(::Union{TigerInfoPOMDP, TigerInfoRPOMDP}, a::Symbol) = a == :listen
 observation_index(::Union{TigerInfoPOMDP, TigerInfoRPOMDP}, z::Symbol) = z == :tigerleft ? 1 : 2
 obs_index(prob::Union{TigerInfoPOMDP, TigerInfoRPOMDP}, z::Symbol) = observation_index(prob, z)
 
-# start knowing baby is not not hungry
 initial_state_distribution(::Union{TigerInfoPOMDP, TigerInfoRPOMDP}) = SparseCat([:tigerleft, :tigerright], [0.5, 0.5])
 initial_belief(::Union{TigerInfoPOMDP, TigerInfoRPOMDP}) = [0.5, 0.5]
 
