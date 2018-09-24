@@ -93,7 +93,7 @@ const odist_tiger = [SparseCat(observations_tiger, [0.85 0.15]) SparseCat(observ
 const oarray_tiger = cat(3, [0.85 0.15; 0.5 0.5; 0.5 0.5], [0.15 0.85; 0.5 0.5; 0.5 0.5]) # Pr(tigerleft|a,sp), Pr(tigerright|a,sp)
 
 # Nominal observations
-observation(prob::Union{TigerIPOMDP, TigerPOMDP}, a::Symbol, sp::Symbol) = odist_tiger[state_index(prob, a), state_index(prob, sp)]
+observation(prob::Union{TigerIPOMDP, TigerPOMDP}, a::Symbol, sp::Symbol) = odist_tiger[action_index(prob, a), state_index(prob, sp)]
 observation(prob::Union{TigerIPOMDP, TigerPOMDP}, a::Symbol, sp::Symbol, z::Symbol) = oarray_tiger[action_index(prob, a), state_index(prob, sp), observation_index(prob, z)]
 
 # Robust observations

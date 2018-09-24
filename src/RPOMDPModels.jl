@@ -32,6 +32,11 @@ export
     TigerIPOMDP,
     TigerRIPOMDP
 
+include("TigerRobustInfo.jl")
+export
+    TigerInfoPOMDP,
+    TigerInfoRPOMDP
+
 export
     n_states,
     n_actions,
