@@ -42,6 +42,13 @@ export
     TigerInfoPOMDP,
     TigerInfoRPOMDP
 
+include("CyberRobust.jl")
+export
+    CyberPOMDP,
+    CyberRPOMDP,
+    CyberIPOMDP,
+    CyberRIPOMDP
+
 export
     n_states,
     n_actions,

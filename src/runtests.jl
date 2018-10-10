@@ -54,3 +54,32 @@ using RPOMDPs, RPOMDPModels
     @test generate_sor(p, b, s, a, rng)[2] == :crying
     @test generate_sor(rp, b, s, a, rng)[2] == :crying
 end
+
+
+using RPOMDPs, RPOMDPModels
+
+p = CyberPOMDP()
+ip = CyberIPOMDP()
+rp = CyberRPOMDP()
+rip = CyberRIPOMDP()
+
+state_index(p, [2,3,2]) == 17
+action_index(ip, [2,3]) == 6
+observation_index(rp, [1,1,3]) == 3
+transition(rp, [2,2,2], [1,3], [3,2,3])[2] ≈ 0.079625
+observation(rp, [1,1], [2,1,3])[1][3] ≈ 0.0025
+dynamics(rip)[1][1,1,1,1] ≈ 0.21114
+reward(rp, [1,3,2], [1,3])
+reward(rip, fill(1/27,27), [3,3]) ≈ 0.0370370370370
+reward(rip, vcat(1.0, zeros(26)), [1,3]) == 1.0
+
+b = vcat([0.8, 0.2], zeros(25))
+s = [1,2,3]
+a = [2,3]
+rng = MersenneTwister(20348)
+generate_sor(p, b, s, a, rng)[2]
+generate_sor(rp, b, s, a, rng)[2]
+
+pl = [0.0, 0.2]
+pu = [0.00000001, 1.0]
+pout = sps.psample(pl, pu)
