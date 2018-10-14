@@ -99,21 +99,23 @@ action_index(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, a::Vec
 observation_index(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, z::Vector{Int}) = find(x -> x == z, observations_cyber)[1]
 obs_index(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, z::Vector{Int}) = observation_index(prob, z)
 
+e11 = zeros(nS); e11[1] = 1.0;
+const e1 = copy(e11)
 initial_state_distribution(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = SparseCat(states_cyber, e1)
 initial_belief(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = prob.b0
 
 # Transitions
 const pϵ_cyber = 1e-6 # near-saturation bound
-const delt = 0.05 # imprecision in p_detect
-const pd = 0.1 # prob of decline
-const ps = 0.6 # prob of stay
+const delt = 0.2 # imprecision
+const pd = 0.25 # prob of decline
+const ps = 0.45 # prob of stay
 const pi = 0.3 # prob of improve
 const psd = ps + pd # prob of decline or stay at lower border
 const psi = ps + pi # prob of stay or improve at upper border
 
 # transition function: probabilty of going from state s to state j
 function psj(s::Vector{Int},j::Vector{Int})
-  prob = 1
+  prob = 1.0
   count = 0
   for i = 1:nmoe
     level_s = s[i]
@@ -124,7 +126,7 @@ function psj(s::Vector{Int},j::Vector{Int})
       elseif level_j == level_s + 1
         prob = prob * pi
       else # zero probability of skipping levels
-        prob = 0
+        return prob = 0.0
       end
     elseif level_s == lmax # current state is highest level
       if level_j == level_s
@@ -132,7 +134,7 @@ function psj(s::Vector{Int},j::Vector{Int})
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        prob = 0
+        return prob = 0.0
       end
     else # current state is an intermediate level
       if level_j == level_s
@@ -143,7 +145,7 @@ function psj(s::Vector{Int},j::Vector{Int})
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        prob = 0
+        return prob = 0.0
       end
     end
   end
@@ -153,9 +155,9 @@ end
 function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
   # add imprecision (one-sided)
   delt > 0 ? (pd,ps,pi) = min.(par .+ delt, 1 - pϵ_cyber) : (pd,ps,pi) = max.(par .+ delt, 0 + pϵ_cyber)
-  psd = ps + pd # prob of decline or stay at lower border
-  psi = ps + pi # prob of stay or improve at upper border
-  prob = 1
+  psd = min(ps + pd, 1 - pϵ_cyber) # prob of decline or stay at lower border
+  psi = min(ps + pi, 1 - pϵ_cyber) # prob of stay or improve at upper border
+  prob = 1.0
   for i = 1:nmoe
     level_s = s[i]
     level_j = j[i]
@@ -165,7 +167,7 @@ function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
       elseif level_j == level_s + 1
         prob = prob * pi
       else # zero probability of skipping levels
-        prob = 0
+        return prob = 0.0
       end
     elseif level_s == lmax # current state is highest level
       if level_j == level_s
@@ -173,7 +175,7 @@ function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        prob = 0
+        return prob = 0.0
       end
     else # current state is an intermediate level
       if level_j == level_s
@@ -183,7 +185,7 @@ function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        prob = 0
+        return prob = 0.0
       end
     end
   end
@@ -239,12 +241,12 @@ end
 
 # Observation function
 
-const delo = 0.05 # imprecision
-const erro = 0.1 # likelihood of one-sided, one-level observation error
+const delo = 0.15 # imprecision
+const erro = 0.2 # likelihood of one-sided, one-level observation error
 const el = erro - delo
 const eu = erro + delo
 const parl = (el, el^2, 1 - eu, 1 - eu^2)
-const paru = (eu, eu^2, 1- el, 1 - el^2)
+const paru = (eu, eu^2, 1 - el, 1 - el^2)
 const par = (el,eu)
 
 # observation function

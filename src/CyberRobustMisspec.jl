@@ -21,13 +21,15 @@ action_index(::CyberTestIPOMDP, a::Vector{Int}) = find(x -> x == a, actions_cybe
 observation_index(::CyberTestIPOMDP, z::Vector{Int}) = find(x -> x == z, observations_cyber)[1]
 obs_index(prob::CyberTestIPOMDP, z::Vector{Int}) = observation_index(prob, z)
 
-initial_state_distribution(::CyberTestIPOMDP) = SparseCat(states_cyber, e1)
+e11 = zeros(nS); e11[1] = 1.0;
+const e1_test = copy(e11)
+initial_state_distribution(::CyberTestIPOMDP) = SparseCat(states_cyber, e1_test)
 initial_belief(prob::CyberTestIPOMDP) = prob.b0
 
 # Transitions
-const pd_test = 0.15 # prob of decline
-const ps_test = 0.58 # prob of stay
-const pi_test = 0.27 # prob of improve
+const pd_test = 0.05 # prob of decline
+const ps_test = 0.45 # prob of stay
+const pi_test = 0.5 # prob of improve
 const psd_test = ps_test + pd_test # prob of decline or stay at lower border
 const psi_test = ps_test + pi_test # prob of stay or improve at upper border
 
@@ -73,8 +75,8 @@ end
 function psj_test(s::Array{Int,1},j::Array{Int,1},parl_test,delt)
   # add imprecision (one-sided)
   delt > 0 ? (pd_test,ps_test,pi_test) = min.(parl_test .+ delt, 1 - pϵ_cyber) : (pd_test,ps_test,pi_test) = max.(parl_test .+ delt, 0 + pϵ_cyber)
-  psd_test = ps_test + pd_test # prob of decline or stay at lower border
-  psi_test = ps_test + pi_test # prob of stay or improve at upper border
+  psd_test = min(ps_test + pd_test, 1 - pϵ_cyber) # prob of decline or stay at lower border
+  psi_test = min(ps_test + pi_test, 1 - pϵ_cyber) # prob of stay or improve at upper border
   prob = 1
   for i = 1:nmoe
     level_s = s[i]
@@ -146,7 +148,7 @@ transition(prob::CyberTestIPOMDP, s::Vector{Int}, a::Vector{Int}, sp::Vector{Int
 
 # Observation function
 const delo_test = 0.05 # imprecision
-const erro_test = 0.15 # likelihood of one-sided, one-level observation erro_testr
+const erro_test = 0.35 # likelihood of one-sided, one-level observation erro_testr
 const el_test = erro_test - delo_test
 const eu_test = erro_test + delo_test
 const parl_test = (el_test, el_test^2, 1 - eu_test, 1 - eu_test^2)
@@ -324,15 +326,6 @@ end
 function generate_sor(prob::CyberTestIPOMDP, b, s, a, rng::AbstractRNG)
     sp = rand(rng, transition(prob, s, a))
     o = rand(rng, observation(prob, a, sp))
-    r = reward(prob, b, s, a, sp)
-    sp, o, r
-end
-
-function generate_sor(prob::Union{CyberRPOMDP,CyberRIPOMDP}, b, s, a, rng::AbstractRNG)
-    tdist = SparseCat(states(prob), psample(transition(prob, s, a)...))
-    sp = rand(rng, tdist)
-    odist = SparseCat(observations(prob), psample(observation(prob, a, sp)...))
-    o = rand(rng, odist)
     r = reward(prob, b, s, a, sp)
     sp, o, r
 end

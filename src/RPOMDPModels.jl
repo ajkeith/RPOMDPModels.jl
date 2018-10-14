@@ -53,6 +53,11 @@ include("CyberRobustMisspec.jl")
 export
     CyberTestIPOMDP
 
+include("SimpleRobust.jl")
+export
+    SimpleIPOMDP,
+    SimpleRIPOMDP
+
 export
     n_states,
     n_actions,
