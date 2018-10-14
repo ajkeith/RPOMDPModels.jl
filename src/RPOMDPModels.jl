@@ -51,10 +51,7 @@ export
 
 include("CyberRobustMisspec.jl")
 export
-    CyberTestPOMDP,
-    CyberTestRPOMDP,
-    CyberTestIPOMDP,
-    CyberTestRIPOMDP
+    CyberTestIPOMDP
 
 export
     n_states,
