@@ -49,6 +49,13 @@ export
     CyberIPOMDP,
     CyberRIPOMDP
 
+include("CyberRobustMisspec.jl")
+export
+    CyberTestPOMDP,
+    CyberTestRPOMDP,
+    CyberTestIPOMDP,
+    CyberTestRIPOMDP
+
 export
     n_states,
     n_actions,

@@ -3,22 +3,26 @@
 
 struct CyberPOMDP <: POMDP{Vector{Int}, Vector{Int}, Vector{Int}}
     discount::Float64
+    b0::Vector{Float64}
 end
 
 struct CyberRPOMDP <: RPOMDP{Vector{Int}, Vector{Int}, Vector{Int}}
     discount::Float64
     usize::Float64
+    b0::Vector{Float64}
 end
 
 struct CyberIPOMDP <: IPOMDP{Vector{Int}, Vector{Int}, Vector{Int}}
     discount::Float64
     inforeward::Vector{Vector{Float64}}
+    b0::Vector{Float64}
 end
 
 struct CyberRIPOMDP <: RIPOMDP{Vector{Int}, Vector{Int}, Vector{Int}}
     discount::Float64
     usize::Float64
     inforeward::Vector{Vector{Float64}}
+    b0::Vector{Float64}
 end
 
 # Discount
@@ -50,8 +54,14 @@ end
 const actions_cyber = copy(A)
 
 # Observation space
-const observations_cyber = copy(states_cyber)
-const nZ = nS
+const nZ = nlevels ^ na
+Z = Vector{Vector{Int}}(nZ)
+ind = 1
+for i = 1:nlevels, j = 1:nlevels
+  Z[ind] = [i,j]
+  ind += 1
+end
+const observations_cyber = copy(Z)
 
 bs = Vector{Vector{Float64}}(nS)
 bs[1] = vcat(1.0, fill(0.0, nS - 1))
@@ -60,16 +70,21 @@ for i = 2:(nS-1)
   bs[i] = vcat(fill(0.0, i - 1), 1.0, fill(0.0, nS - i))
 end
 const inforeward_cyber = copy(bs)
+b01 = zeros(nS)
+b01[1] = 1.0
+const b0_cyber = copy(b01)
 
-CyberPOMDP() = CyberPOMDP(discount_cyber)
-CyberRPOMDP(err) = CyberRPOMDP(discount_cyber, err)
-CyberRPOMDP() = CyberRPOMDP(discount_cyber, 0.025)
+CyberPOMDP() = CyberPOMDP(discount_cyber, b0_cyber)
 
-CyberIPOMDP(alphas) = CyberIPOMDP(discount_cyber, alphas)
-CyberIPOMDP() = CyberIPOMDP(discount_cyber, inforeward_cyber)
+CyberRPOMDP(err) = CyberRPOMDP(discount_cyber, err, b0_cyber)
+CyberRPOMDP() = CyberRPOMDP(discount_cyber, 0.025, b0_cyber)
 
-CyberRIPOMDP(err::Float64, alphas::Vector{Vector{Float64}}) = CyberRIPOMDP(discount_cyber, err, alphas)
-CyberRIPOMDP() = CyberRIPOMDP(discount_cyber, 0.025, inforeward_cyber)
+CyberIPOMDP(alphas) = CyberIPOMDP(discount_cyber, alphas, b0_cyber)
+CyberIPOMDP() = CyberIPOMDP(discount_cyber, inforeward_cyber, b0_cyber)
+
+CyberRIPOMDP(err::Float64, alphas::Vector{Vector{Float64}}) = CyberRIPOMDP(discount_cyber, err, alphas, b0_cyber)
+CyberRIPOMDP(err::Float64) = CyberRIPOMDP(discount_cyber, err, inforeward_cyber, b0_cyber)
+CyberRIPOMDP() = CyberRIPOMDP(discount_cyber, 0.025, inforeward_cyber, b0_cyber)
 
 states(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = states_cyber
 actions(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = actions_cyber
@@ -84,8 +99,8 @@ action_index(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, a::Vec
 observation_index(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, z::Vector{Int}) = find(x -> x == z, observations_cyber)[1]
 obs_index(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, z::Vector{Int}) = observation_index(prob, z)
 
-initial_state_distribution(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = SparseCat(states_cyber, fill(1/nS, nS))
-initial_belief(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = fill(1/nS, nS)
+initial_state_distribution(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = SparseCat(states_cyber, e1)
+initial_belief(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = prob.b0
 
 # Transitions
 const pϵ_cyber = 1e-6 # near-saturation bound
@@ -233,87 +248,89 @@ const paru = (eu, eu^2, 1- el, 1 - el^2)
 const par = (el,eu)
 
 # observation function
-function o(s::Array{Int,1},a::Array{Int,1},j::Array{Int,1}, eps::Float64)
-  prob = 1
+function o(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, eps::Float64)
+  prob = 1.0
   for i = 1:nmoe
     na = sum(a .== i) # total number of assets assigned to moe i
-    level_s = s[i]
-    level_j = j[i]
-    if na > 0
-      if level_s == lmin # current state is lowest level
-        if level_j == level_s
+    level_sp = sp[i]
+    (na > 0) && (level_z = z[find(a .== i)[1]])
+    if na == 0
+      nothing
+    else
+      any(z[a .== i] .!= level_z) && return prob = 0.0
+      if level_sp == lmin # current state is lowest level
+        if level_z == level_sp
           prob = prob * (1 - (eps ^ na))
-        elseif level_j == level_s + 1
+        elseif level_z == level_sp + 1
           prob = prob * (eps ^ na) # non-linear effect of multiple assets (i.e. if assets disagree, but one is right, the overall observaiton is right)
         else # zero probability of error > 1
-          prob = 0
+          return prob = 0.0
         end
-      elseif level_s == lmax # current state is highest level
-        if level_j == level_s
+      elseif level_sp == lmax # current state is highest level
+        if level_z == level_sp
           prob = prob * (1 - (eps ^ na))
-        elseif level_j == level_s - 1
+        elseif level_z == level_sp - 1
           prob = prob * (eps ^ na)
         else # zero probability of error > 1
-          prob = 0
+          return prob = 0.0
         end
       else # current state is an intermediate level
-        if level_j == level_s
+        if level_z == level_sp
           prob = prob * (1 - 2 * (eps ^ na))
-        elseif level_j == level_s + 1
+        elseif level_z == level_sp + 1
           prob = prob * (eps ^ na)
-        elseif level_j == level_s - 1
+        elseif level_z == level_sp - 1
           prob = prob * (eps ^ na)
         else # zero probability of error > 1
-          prob = 0
+          return prob = 0.0
         end
       end
-    else
-      level_s == level_j ? true : prob = 0 # unassigned moe can't change observation status
     end
   end
-  prob
+  return prob
 end
 
-function o(s::Vector{Int},a::Vector{Int},j::Vector{Int},par,del::Float64)
+function o(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, par, del::Float64)
   del > 0 ? (e1, e2) = par : (e2, e1) = par
-  prob = 1
+  prob = 1.0
   for i = 1:nmoe
     na = sum(a .== i) # total number of assets assigned to moe i
-    level_s = s[i]
-    level_j = j[i]
-    if na > 0
-      if level_s == lmin # current state is lowest level
-        if level_j == level_s
+    level_sp = sp[i]
+    (na > 0) && (level_z = z[find(a .== i)[1]])
+    if na == 0
+      nothing
+    else
+      any(z[a .== i] .!= level_z) && return prob = 0.0
+      if level_sp == lmin # current state is lowest level
+        if level_z == level_sp
           prob = prob * (1 - (e1 ^ na))
-        elseif level_j == level_s + 1
+        elseif level_z == level_sp + 1
           prob = prob * (e2 ^ na) # non-linear effect of multiple assets (i.e. if assets disagree, but one is right, the overall observaiton is right)
         else # zero probability of error > 1
-          prob = 0
+          return prob = 0.0
         end
-      elseif level_s == lmax # current state is highest level
-        if level_j == level_s
+      elseif level_sp == lmax # current state is highest level
+        if level_z == level_sp
           prob = prob * (1 - (e1 ^ na))
-        elseif level_j == level_s - 1
+        elseif level_z == level_sp - 1
           prob = prob * (e2 ^ na)
         else # zero probability of error > 1
-          prob = 0
+          return prob = 0.0
         end
       else # current state is an intermediate level
-        if level_j == level_s
+        if level_z == level_sp
           prob = prob * (1 - 2 * (e1 ^ na))
-        elseif level_j == level_s + 1
+        elseif level_z == level_sp + 1
           prob = prob * (e2 ^ na)
-        elseif level_j == level_s - 1
+        elseif level_z == level_sp - 1
           prob = prob * (e2 ^ na)
         else # zero probability of error > 1
-          prob = 0
+          return prob = 0.0
         end
       end
-    else
-      level_s == level_j ? true : prob = 0 # unassigned moe can't change observation status
     end
   end
-  prob
+  return prob
 end
 
 # calculate trasnsition matrix
@@ -321,12 +338,12 @@ function calcOArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, Z::Vector{Ve
   O = zeros(nA,nS,nZ)
   Ol = zeros(nA,nS,nZ)
   Ou = zeros(nA,nS,nZ)
-  for (si,s) in enumerate(S), (zi,z) in enumerate(Z), (ai,a) in enumerate(A)
-    O[ai, si, zi] = o(s, a, z, erro)
-    neg = o(s, a, z, par, -delo)
-    pos = o(s, a, z, par, delo)
-    Ol[ai, si, zi] = min(neg, pos)
-    Ou[ai, si, zi] = max(neg, pos)
+  for (spi,sp) in enumerate(S), (zi,z) in enumerate(Z), (ai,a) in enumerate(A)
+    O[ai, spi, zi] = o(a, sp, z, erro)
+    neg = o(a, sp, z, par, -delo)
+    pos = o(a, sp, z, par, delo)
+    Ol[ai, spi, zi] = min(neg, pos)
+    Ou[ai, spi, zi] = max(neg, pos)
   end
   O, Ol, Ou
 end
