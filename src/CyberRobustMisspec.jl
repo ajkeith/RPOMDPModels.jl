@@ -121,8 +121,14 @@ function calcTArray_test(S::Vector{Vector{Int}}, A::Vector{Vector{Int}},parl_tes
   Tu = zeros(ns, na, ns)
   for (si,s) in enumerate(S), (ji,j) in enumerate(S)
       T[si,:,ji] = psj_test(s,j)
-      Tl[si,:,ji] = psj_test(s,j,parl_test,-delt)
-      Tu[si,:,ji] = psj_test(s,j,parl_test,delt)
+      tl = psj_test(s,j,parl_test,-delt)
+      tu = psj_test(s,j,parl_test,delt)
+      (tl == tu) && (tu = tu + pϵ_cyber)
+      Tl[si,:,ji] = tl
+      Tu[si,:,ji] = tu
+  end
+  for (si,s) in enumerate(S), (ai,a) in enumerate(A)
+    T[si,ai,:] = T[si,ai,:] ./ sum(T[si,ai,:])
   end
   T, Tl, Tu
 end
@@ -165,14 +171,14 @@ function o_test(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, eps::Float64)
     if na == 0
       nothing
     else
-      any(z[a .== i] .!= level_z) && return prob = 0.0
+      any(z[a .== i] .!= level_z) && return prob = pϵ_cyber
       if level_sp == lmin # current state is lowest level
         if level_z == level_sp
           prob = prob * (1 - (eps ^ na))
         elseif level_z == level_sp + 1
           prob = prob * (eps ^ na) # non-linear effect of multiple assets (i.e. if assets disagree, but one is right, the overall observaiton is right)
         else # zero probability of error > 1
-          return prob = 0.0
+          return prob = pϵ_cyber
         end
       elseif level_sp == lmax # current state is highest level
         if level_z == level_sp
@@ -180,7 +186,7 @@ function o_test(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, eps::Float64)
         elseif level_z == level_sp - 1
           prob = prob * (eps ^ na)
         else # zero probability of error > 1
-          return prob = 0.0
+          return prob = pϵ_cyber
         end
       else # current state is an intermediate level
         if level_z == level_sp
@@ -190,7 +196,7 @@ function o_test(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, eps::Float64)
         elseif level_z == level_sp - 1
           prob = prob * (eps ^ na)
         else # zero probability of error > 1
-          return prob = 0.0
+          return prob = pϵ_cyber
         end
       end
     end
@@ -208,14 +214,14 @@ function o_test(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, par_test, del::
     if na == 0
       nothing
     else
-      any(z[a .== i] .!= level_z) && return prob = 0.0
+      any(z[a .== i] .!= level_z) && return prob = pϵ_cyber
       if level_sp == lmin # current state is lowest level
         if level_z == level_sp
           prob = prob * (1 - (e1 ^ na))
         elseif level_z == level_sp + 1
           prob = prob * (e2 ^ na) # non-linear effect of multiple assets (i.e. if assets disagree, but one is right, the overall observaiton is right)
         else # zero probability of error > 1
-          return prob = 0.0
+          return prob = pϵ_cyber
         end
       elseif level_sp == lmax # current state is highest level
         if level_z == level_sp
@@ -223,7 +229,7 @@ function o_test(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, par_test, del::
         elseif level_z == level_sp - 1
           prob = prob * (e2 ^ na)
         else # zero probability of error > 1
-          return prob = 0.0
+          return prob = pϵ_cyber
         end
       else # current state is an intermediate level
         if level_z == level_sp
@@ -233,7 +239,7 @@ function o_test(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, par_test, del::
         elseif level_z == level_sp - 1
           prob = prob * (e2 ^ na)
         else # zero probability of error > 1
-          return prob = 0.0
+          return prob = pϵ_cyber
         end
       end
     end
@@ -247,11 +253,17 @@ function calcOArray_test(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, Z::Vect
   Ol = zeros(nA,nS,nZ)
   Ou = zeros(nA,nS,nZ)
   for (spi,sp) in enumerate(S), (zi,z) in enumerate(Z), (ai,a) in enumerate(A)
-    O[ai, spi, zi] = o_test(a, sp, z, erro_test)
+    O[ai, spi, zi] = o(a, sp, z, erro_test)
     neg = o_test(a, sp, z, par_test, -delo_test)
     pos = o_test(a, sp, z, par_test, delo_test)
-    Ol[ai, spi, zi] = min(neg, pos)
-    Ou[ai, spi, zi] = max(neg, pos)
+    ol = min(neg, pos)
+    ou = max(neg, pos)
+    (ol == ou) && (ou = ou + pϵ_cyber)
+    Ol[ai, spi, zi] = ol
+    Ou[ai, spi, zi] = ou
+  end
+  for (spi,sp) in enumerate(S), (ai,a) in enumerate(A)
+    O[ai, spi,:] = O[ai,spi,:] ./ sum(O[ai,spi,:])
   end
   O, Ol, Ou
 end

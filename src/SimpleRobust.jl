@@ -103,22 +103,22 @@ function transition(prob::SimpleRIPOMDP, s::Symbol, a::Symbol)
     pbt = prob.pbt
     if s == :left
         if a == :single
-            plower = max.([pst, 1-pst] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([pst, 1-pst] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([pst - prob.usize, 1-pst-prob.usize/10], 0.0 + pϵ_simple)
+            pupper = min.([pst + prob.usize/10, 1-pst+prob.usize], 1.0 - pϵ_simple)
             return plower, pupper
         else
-            plower = max.([pbt, 1-pbt] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([pbt, 1-pbt] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([pbt, 1-pbt] - prob.usize/10, 0.0 + pϵ_simple)
+            pupper = min.([pbt, 1-pbt] + prob.usize/10, 1.0 - pϵ_simple)
             return plower, pupper
         end
     else
         if a == :single
-            plower = max.([1-pst, pst] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([1-pst, pst] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([1-pst - prob.usize/10, pst - prob.usize], 0.0 + pϵ_simple)
+            pupper = min.([1-pst + prob.usize, pst + prob.usize/10], 1.0 - pϵ_simple)
             return plower, pupper
         else
-            plower = max.([1-pbt, pbt] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([1-pbt, pbt] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([1-pbt, pbt] - prob.usize/10, 0.0 + pϵ_simple)
+            pupper = min.([1-pbt, pbt] + prob.usize/10, 1.0 - pϵ_simple)
             return plower, pupper
         end
     end
@@ -132,42 +132,42 @@ function transition(prob::SimpleRIPOMDP, s::Symbol, a::Symbol, sp::Symbol)
         if a == :single
             if sp == :left
                 plower = max.(pst - prob.usize, 0.0 + pϵ_simple)
-                pupper = min.(pst + prob.usize, 1.0 - pϵ_simple)
+                pupper = min.(pst + prob.usize/10, 1.0 - pϵ_simple)
                 return plower, pupper
             else
-                plower = max.(1-pst - prob.usize, 0.0 + pϵ_simple)
+                plower = max.(1-pst - prob.usize/10, 0.0 + pϵ_simple)
                 pupper = min.(1-pst + prob.usize, 1.0 - pϵ_simple)
                 return plower, pupper
             end
         else
             if sp == :left
-                plower = max.(pbt - prob.usize, 0.0 + pϵ_simple)
+                plower = max.(pbt - prob.usize/10, 0.0 + pϵ_simple)
                 pupper = min.(pbt + prob.usize, 1.0 - pϵ_simple)
                 return plower, pupper
             else
                 plower = max.(1-pbt - prob.usize, 0.0 + pϵ_simple)
-                pupper = min.(1-pbt + prob.usize, 1.0 - pϵ_simple)
+                pupper = min.(1-pbt + prob.usize/10, 1.0 - pϵ_simple)
                 return plower, pupper
             end
         end
     else
         if a == :single
             if sp == :left
-                plower = max.(1-pst - prob.usize, 0.0 + pϵ_simple)
+                plower = max.(1-pst - prob.usize/10, 0.0 + pϵ_simple)
                 pupper = min.(1-pst + prob.usize, 1.0 - pϵ_simple)
                 return plower, pupper
             else
                 plower = max.(pst - prob.usize, 0.0 + pϵ_simple)
-                pupper = min.(pst + prob.usize, 1.0 - pϵ_simple)
+                pupper = min.(pst + prob.usize/10, 1.0 - pϵ_simple)
                 return plower, pupper
             end
         else
             if sp == :left
                 plower = max.(1-pbt - prob.usize, 0.0 + pϵ_simple)
-                pupper = min.(1-pbt + prob.usize, 1.0 - pϵ_simple)
+                pupper = min.(1-pbt + prob.usize/10, 1.0 - pϵ_simple)
                 return plower, pupper
             else
-                plower = max.(pbt - prob.usize, 0.0 + pϵ_simple)
+                plower = max.(pbt - prob.usize/10, 0.0 + pϵ_simple)
                 pupper = min.(pbt + prob.usize, 1.0 - pϵ_simple)
                 return plower, pupper
             end
@@ -197,15 +197,15 @@ function observation(prob::SimpleIPOMDP, a::Symbol, sp::Symbol)
     pb = prob.pb
     if a == :single
         if sp == :left
-            return SparseCat([:L, :R], [ps, 1-ps])
+            return SparseCat([:L, :R, :LL, :LR, :RL, :RR], [ps-0.001, 1-ps, 0.001/4, 0.001/4, 0.001/4, 0.001/4])
         else
-            return SparseCat([:L, :R], [1-ps, ps])
+            return SparseCat([:L, :R, :LL, :LR, :RL, :RR], [1-ps, ps-0.001, 0.001/4, 0.001/4, 0.001/4, 0.001/4])
         end
     else
         if sp == :left
-            return SparseCat([:LL :LR :RL :RR], [pb*pb (1-pb)*pb pb*(1-pb) (1-pb)*(1-pb)])
+            return SparseCat([:L, :R, :LL, :LR, :RL, :RR], [0.001/2, 0.001/2, pb*pb-0.001, (1-pb)*pb, pb*(1-pb), (1-pb)*(1-pb)])
         else
-            return SparseCat([:LL :LR :RL :RR], [(1-pb)*(1-pb) (1-pb)*pb pb*(1-pb) pb*pb])
+            return SparseCat([:L, :R, :LL, :LR, :RL, :RR], [0.001/2, 0.001/2, (1-pb)*(1-pb), (1-pb)*pb, pb*(1-pb), pb*pb-0.001])
         end
     end
     return nothing
@@ -220,22 +220,22 @@ function observation(prob::SimpleRIPOMDP, a::Symbol, sp::Symbol)
     pb = prob.pb
     if a == :single
         if sp == :left
-            plower = max.([ps, 1-ps, 0, 0, 0, 0] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([ps, 1-ps, 0, 0, 0, 0] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([ps-0.001 - prob.usize, 1-ps - prob.usize/10, 0, 0, 0, 0], 0.0 + pϵ_simple)
+            pupper = min.([ps-0.001 + prob.usize/10, 1-ps + prob.usize, 0.001/4, 0.001/4, 0.001/4, 0.001/4], 1.0 - pϵ_simple)
             return plower, pupper
         else
-            plower = max.([1-ps, ps, 0, 0, 0, 0] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([1-ps, ps, 0, 0, 0, 0] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([1-ps - prob.usize/10, ps-0.001-prob.usize, 0, 0, 0, 0], 0.0 + pϵ_simple)
+            pupper = min.([1-ps + prob.usize, ps-0.001+prob.usize/10, 0.001/4, 0.001/4, 0.001/4, 0.001/4], 1.0 - pϵ_simple)
             return plower, pupper
         end
     else
         if sp == :left
-            plower = max.([0, 0, pb*pb, (1-pb)*pb, pb*(1-pb), (1-pb)*(1-pb)] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([0, 0, pb*pb, (1-pb)*pb, pb*(1-pb), (1-pb)*(1-pb)] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([0, 0, pb*pb-0.001, (1-pb)*pb, pb*(1-pb), (1-pb)*(1-pb)] - prob.usize/10, 0.0 + pϵ_simple)
+            pupper = min.([0.001/2, 0.001/2, pb*pb-0.001, (1-pb)*pb, pb*(1-pb), (1-pb)*(1-pb)] + prob.usize/10, 1.0 - pϵ_simple)
             return plower, pupper
         else
-            plower = max.([0, 0, (1-pb)*(1-pb), (1-pb)*pb, pb*(1-pb), pb*pb] - prob.usize, 0.0 + pϵ_simple)
-            pupper = min.([0, 0, (1-pb)*(1-pb), (1-pb)*pb, pb*(1-pb), pb*pb] + prob.usize, 1.0 - pϵ_simple)
+            plower = max.([0, 0, (1-pb)*(1-pb), (1-pb)*pb, pb*(1-pb), pb*pb-0.001] - prob.usize/10, 0.0 + pϵ_simple)
+            pupper = min.([0.001/2, 0.001/2, (1-pb)*(1-pb), (1-pb)*pb, pb*(1-pb), pb*pb-0.001] + prob.usize/10, 1.0 - pϵ_simple)
             return plower, pupper
         end
     end
@@ -343,6 +343,7 @@ function generate_sor(prob::SimpleIPOMDP, b, s, a, rng::AbstractRNG)
     sp, o, r
 end
 
+# uniform random generate_sor (original)
 function generate_sor(prob::SimpleRIPOMDP, b, s, a, rng::AbstractRNG)
     tdist = SparseCat(states(prob), psample(transition(prob, s, a)...))
     sp = rand(rng, tdist)
@@ -351,3 +352,18 @@ function generate_sor(prob::SimpleRIPOMDP, b, s, a, rng::AbstractRNG)
     r = reward(prob, b, s, a, sp)
     sp, o, r
 end
+#
+# # worst-case generate_sor
+# function generate_sor_worst(prob::SimpleRIPOMDP, b, s, a, rng::AbstractRNG, alphavecs)
+#     u, p = minutil(prob, b, a, alphavecs)
+#     sind = state_index(prob, s)
+#     tdist = SparseCat(states(prob), [sum(p[1,:,sind])/sum(p[:,:,sind]), sum(p[2,:,sind])/sum(p[:,:,sind])])
+#     sp = rand(rng, tdist)
+#     odenom = sum(p[:,:,sind])
+#     oarray = [sum(p[:,1,sind]), sum(p[:,1,sind]), sum(p[:,1,sind]),
+#                 sum(p[:,1,sind]), sum(p[:,1,sind]), sum(p[:,1,sind])] ./ odenom
+#     odist = SparseCat(observations(prob), oarray)
+#     o = rand(rng, odist)
+#     r = reward(prob, b, s, a, sp)
+#     sp, o, r
+# end

@@ -3,6 +3,7 @@ module RPOMDPModels
 using RPOMDPs
 using RPOMDPToolbox
 using Distributions, SimpleProbabilitySets
+using JuMP, Clp
 using StaticArrays
 using AutoHashEquals
 using StatsBase
@@ -74,6 +75,7 @@ export
     action,
     initial_belief,
     generate_sor,
+    generate_sor_worst,
     initial_state_distribution
 
 end # module
