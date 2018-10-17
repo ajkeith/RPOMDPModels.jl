@@ -346,8 +346,10 @@ end
 # uniform random generate_sor (original)
 function generate_sor(prob::SimpleRIPOMDP, b, s, a, rng::AbstractRNG)
     tdist = SparseCat(states(prob), psample(transition(prob, s, a)...))
+    @show tdist
     sp = rand(rng, tdist)
     odist = SparseCat(observations(prob), psample(observation(prob, a, sp)...))
+    @show odist
     o = rand(rng, odist)
     r = reward(prob, b, s, a, sp)
     sp, o, r
