@@ -19,6 +19,13 @@ import Base.hash
 import RPOMDPs: initial_state, generate_s, generate_o, generate_sor
 import RPOMDPs: observation
 
+include("Baby2POMDP.jl")
+export
+    Baby2POMDP,
+    Baby2RPOMDP,
+    Baby2IPOMDP,
+    Baby2RIPOMDP
+
 include("BabyRobust.jl")
 export
     BabyPOMDP,
