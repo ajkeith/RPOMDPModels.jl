@@ -100,7 +100,10 @@ const odist_baby2 = [SparseCat([:quiet, :crying], [0.2, 0.8])
                     SparseCat([:quiet, :crying], [0.9, 0.1])]
 
 # Nominal observation function array oarray_baby2[a,sp,z] = Pr(z|a,sp)
-const oarray_baby2 = cat(3, [0.8 0.1; 0.8 0.1], [0.2 0.9; 0.2 0.9]) # Pr(quiet|a,sp), # Pr(crying|a,sp), # Pr(yelling|a,sp)
+const oarray_baby2 = cat(3, [0.2 0.9; 0.2 0.9], [0.8 0.1; 0.8 0.1])
+
+# temporary decrease in observation capability to test robustness
+# const oarray_baby2 = cat(3, [0.3 0.7; 0.3 0.7], [0.7 0.3; 0.7 0.3])
 
 # Nominal observations
 observation(prob::Union{Baby2IPOMDP, Baby2POMDP}, a::Symbol, sp::Symbol) = odist_baby2[state_index(prob, sp)]

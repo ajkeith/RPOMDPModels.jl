@@ -38,6 +38,14 @@ export
     BabyInfoPOMDP,
     BabyInfoRPOMDP
 
+include("SimpleBaby2Robust.jl")
+export
+    SimpleBaby2RPOMDP
+
+include("SimpleTigerRobust.jl")
+export
+    SimpleTigerRPOMDP
+
 include("TigerRobust.jl")
 export
     TigerPOMDP,

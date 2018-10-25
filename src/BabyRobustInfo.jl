@@ -75,7 +75,7 @@ const odist_baby_info = [SparseCat(observations_baby_info, [0.3 0.6 0.1]) Sparse
                     SparseCat(observations_baby_info, [0.75 0.3 0.05]) SparseCat(observations_baby_info, [0.9 0.05 0.05])]
 
 # Nominal observation function array oarray_baby_info[a,sp,z] = Pr(z|a,sp)
-const oarray_baby_info = cat(3, [0.3 0.8; 0.3 0.6; 0.75 0.9], [0.6 0.1; 0.4 0.2; 0.3 0.05], [0.1 0.1; 0.3 0.2; 0.05 0.05]) # Pr(babyleft|a,sp), Pr(babyright|a,sp)
+const oarray_baby_info = cat(3, [0.3 0.8; 0.3 0.6; 0.75 0.9], [0.6 0.1; 0.4 0.2; 0.25 0.05], [0.1 0.1; 0.3 0.2; 0.05 0.05]) # Pr(babyleft|a,sp), Pr(babyright|a,sp)
 
 # Nominal observations
 observation(prob::BabyInfoPOMDP, a::Symbol, sp::Symbol) = odist_baby_info[action_index(prob, a), state_index(prob, sp)]

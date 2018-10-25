@@ -21,7 +21,7 @@ struct TigerRIPOMDP <: RIPOMDP{Symbol, Symbol, Symbol}
     inforeward::Vector{Vector{Float64}}
 end
 
-const discount_tiger = 0.75
+const discount_tiger = 0.95
 const states_tiger = [:tigerleft, :tigerright]
 const actions_tiger = [:listen, :openleft, :openright]
 const observations_tiger = [:tigerleft, :tigerright]
