@@ -74,6 +74,11 @@ export
     SimpleIPOMDP,
     SimpleRIPOMDP
 
+include("RockDiagnosis.jl")
+export
+    RockIPOMDP,
+    RockRIPOMDP
+
 export
     n_states,
     n_actions,
