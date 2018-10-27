@@ -23,10 +23,10 @@ end
 # rock loation, starting location, rock status, and max sensor efficiency
 const lrock = 2
 const lstart = 1
-const srock = :good
-const seff = 1.0
+const srock = :bad
+const seff = 0.9
 
-const discount_rock = 0.95
+const discount_rock = 0.99
 const states_rock = [10, 11, 20, 21] # location: 1 or 2, rock status: 0 (bad) or 1 (good)
 const actions_rock = [:left, :right, :check]
 const observations_rock = [:good, :bad, :none]
@@ -35,6 +35,7 @@ const inforeward_rock = [[1.0, -1/3, -1/3, -1/3],
                          [-1/3, -1/3, 1.0, -1/3],
                          [-1/3, -1/3, -1/3, 1.0]]
 const initbelief_rock = [0.5, 0.5, 0.0, 0.0]
+const initbelief_dist_rock = SparseCat(states_rock, initbelief_rock)
 const initdist_rock = SparseCat(states_rock, [1.0, 0.0, 0.0, 0.0])
 const pϵ_rock = 1e-6
 
@@ -61,7 +62,7 @@ const tarray_rock = cat(3, [1.0 0.0 1.0; 0.0 0.0 0.0; 1.0 0.0 0.0; 0.0 0.0 0.0],
 # Nominal observation function distributions
 function peff(xs::Int, ys::Int, xr::Int, yr::Int, maxeff::Float64)
    dist = sqrt((yr -ys)^2 + (xr - xs)^2)
-   return maxeff * (1 + exp(-dist)) / 2
+   return maxeff * (1 + exp(-dist * 0.2)) / 2
 end
 peff(xs::Int, ys::Int, xr::Int, yr::Int) = peff(xs, ys, xr, yr, 1.0)
 const ps1 = peff(1, 0, 2, 0, seff)
@@ -86,10 +87,10 @@ const oarray_rock = cat(3, [0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0; 1-ps1 ps1 1-ps2 ps
                           [1.0 1.0 1.0 1.0; 1.0 1.0 1.0 1.0; 0.0 0.0 0.0 0.0])   # z = nothing
 
 function buildor(array::Array{Float64}, ps1::Float64, ps2::Float64, uncsize::Float64)
-  ps1_l = max(ps1 - uncsize, 0.0 + pϵ_rock/2)
-  ps1_u = min(ps1 + uncsize, 1.0 - pϵ_rock/2)
-  ps2_l = max(ps2 - uncsize, 0.0 + pϵ_rock/2)
-  ps2_u = min(ps2 + uncsize, 1.0 - pϵ_rock/2)
+  ps1_l = max(ps1 - 2 * pϵ_rock, 0.0)
+  ps1_u = min(ps1 + 2 * pϵ_rock, 1.0)
+  ps2_l = max(ps2 - uncsize, 0.0)
+  ps2_u = min(ps2 + uncsize, 1.0)
   o_l = cat(3, [0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0; 1-ps1_l ps1_l 1-ps2_l ps2_l],
                [0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0; ps1_l 1-ps1_l ps2_l 1-ps2_l],
                [1.0 1.0 1.0 1.0; 1.0 1.0 1.0 1.0; 0.0 0.0 0.0 0.0])
@@ -110,15 +111,35 @@ end
 RockIPOMDP() = RockIPOMDP(inforeward_rock)
 
 function RockRIPOMDP(alphas::Vector{Vector{Float64}}, usize::Float64)
-    # tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock / 2)
-    # tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock / 2)
-    tarrayl = max.(tarray_rock - pϵ_rock, 0.0)
-    tarrayu = min.(tarray_rock + pϵ_rock, 1.0)
     oarrayl, oarrayu = buildor(oarray_rock, ps1, ps2, usize)
-    # oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock / 2)
-    # oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock / 2)
-    oarrayl = max.(oarrayl - pϵ_rock, 0.0)
-    oarrayu = min.(oarrayu + pϵ_rock, 1.0)
+    # tarrayl = max.(tarray_rock - usize, 0.0 + pϵ_rock)
+    # tarrayu = min.(tarray_rock + usize, 1.0 - pϵ_rock)
+    # oarrayl = max.(oarray_rock - usize, 0.0 + pϵ_rock)
+    # oarrayu = min.(oarray_rock + usize, 1.0 - pϵ_rock)
+    tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock / 2)
+    tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock / 2)
+    # tarrayl = max.(tarray_rock - pϵ_rock, 0.0)
+    # tarrayu = min.(tarray_rock + pϵ_rock, 1.0)
+    # tarrayl = tarray_rock
+    # tarrayu = tarray_rock
+    # tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock)
+    # tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock)
+    oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock / 2)
+    oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock / 2)
+    # oarrayl = max.(oarrayl - pϵ_rock, 0.0)
+    # oarrayu = min.(oarrayu + pϵ_rock, 1.0)
+    # oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock)
+    # oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock)
+    for si = 1:length(states_rock), ai = 1:length(actions_rock)
+        if sum(tarrayl[si, ai, :]) >= 1.0
+            tarrayl[si, ai, :] = tarrayl[si, ai, :] * (1 - pϵ_rock) / sum(tarrayl[si, ai, :])
+        end
+    end
+    for ai = 1:length(actions_rock), spi = 1:length(states_rock)
+        if sum(oarrayl[ai, spi, :]) >= 1.0
+            oarrayl[ai, spi, :] = oarrayl[ai, spi, :] * (1 - pϵ_rock) / sum(oarrayl[ai, spi, :])
+        end
+    end
     discount = discount_rock
     RockRIPOMDP(tarrayl, tarrayu, oarrayl, oarrayu, alphas, discount, usize)
 end
@@ -176,6 +197,7 @@ obs_index(prob::Union{RockIPOMDP, RockRIPOMDP}, z::Symbol) = observation_index(p
 
 initial_state_distribution(::Union{RockIPOMDP, RockRIPOMDP}) = initdist_rock
 initial_belief(::Union{RockIPOMDP, RockRIPOMDP}) = initbelief_rock
+initial_belief_distribution(::Union{RockIPOMDP, RockRIPOMDP}) = initbelief_dist_rock
 
 # Nominal transitions
 transition(prob::RockIPOMDP, s::Int, a::Symbol) = prob.tdist[state_index(prob, s), action_index(prob, a)]

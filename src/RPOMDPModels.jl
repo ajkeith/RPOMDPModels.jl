@@ -96,6 +96,7 @@ export
     initial_belief,
     generate_sor,
     generate_sor_worst,
-    initial_state_distribution
+    initial_state_distribution,
+    initial_belief_distribution
 
 end # module
