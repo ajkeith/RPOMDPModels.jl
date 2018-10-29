@@ -36,7 +36,7 @@ const inforeward_rock = [[1.0, -1/3, -1/3, -1/3],
                          [-1/3, -1/3, -1/3, 1.0]]
 const initbelief_rock = [0.5, 0.5, 0.0, 0.0]
 const initbelief_dist_rock = SparseCat(states_rock, initbelief_rock)
-const initdist_rock = SparseCat(states_rock, [1.0, 0.0, 0.0, 0.0])
+const initdist_rock = SparseCat(states_rock, [0.5, 0.5, 0.0, 0.0])
 const pϵ_rock = 1e-6
 
 # Nominal transition function distributions (deterministic)
@@ -87,10 +87,10 @@ const oarray_rock = cat(3, [0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0; 1-ps1 ps1 1-ps2 ps
                           [1.0 1.0 1.0 1.0; 1.0 1.0 1.0 1.0; 0.0 0.0 0.0 0.0])   # z = nothing
 
 function buildor(array::Array{Float64}, ps1::Float64, ps2::Float64, uncsize::Float64)
-  ps1_l = max(ps1 - 2 * pϵ_rock, 0.0)
-  ps1_u = min(ps1 + 2 * pϵ_rock, 1.0)
-  ps2_l = max(ps2 - uncsize, 0.0)
-  ps2_u = min(ps2 + uncsize, 1.0)
+  ps1_l = max(ps1 - 2 * pϵ_rock, 0.0 + pϵ_rock)
+  ps1_u = min(ps1 + 2 * pϵ_rock, 1.0 - pϵ_rock)
+  ps2_l = max(ps2 - uncsize, 0.0 + pϵ_rock)
+  ps2_u = min(ps2 + uncsize, 1.0 - pϵ_rock)
   o_l = cat(3, [0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0; 1-ps1_l ps1_l 1-ps2_l ps2_l],
                [0.0 0.0 0.0 0.0; 0.0 0.0 0.0 0.0; ps1_l 1-ps1_l ps2_l 1-ps2_l],
                [1.0 1.0 1.0 1.0; 1.0 1.0 1.0 1.0; 0.0 0.0 0.0 0.0])
@@ -100,51 +100,55 @@ function buildor(array::Array{Float64}, ps1::Float64, ps2::Float64, uncsize::Flo
   min.(o_l, o_u), max.(o_l, o_u)
 end
 
-function RockIPOMDP(alphas::Vector{Vector{Float64}})
+function RockIPOMDP(alphas::Vector{Vector{Float64}}, disc::Float64)
     tdist = tdist_rock
     tarray = tarray_rock
     odist = odist_rock
     oarray = oarray_rock
-    discount = discount_rock
+    discount = disc
     RockIPOMDP(tdist, tarray, odist, oarray, alphas, discount)
 end
+RockIPOMDP(disc::Float64) = RockIPOMDP(inforeward_rock, disc)
+RockIPOMDP(alphas::Vector{Vector{Float64}}) = RockIPOMDP(alphas, discount_rock)
 RockIPOMDP() = RockIPOMDP(inforeward_rock)
 
-function RockRIPOMDP(alphas::Vector{Vector{Float64}}, usize::Float64)
+function RockRIPOMDP(alphas::Vector{Vector{Float64}}, disc::Float64, usize::Float64)
     oarrayl, oarrayu = buildor(oarray_rock, ps1, ps2, usize)
     # tarrayl = max.(tarray_rock - usize, 0.0 + pϵ_rock)
     # tarrayu = min.(tarray_rock + usize, 1.0 - pϵ_rock)
     # oarrayl = max.(oarray_rock - usize, 0.0 + pϵ_rock)
     # oarrayu = min.(oarray_rock + usize, 1.0 - pϵ_rock)
-    tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock / 2)
-    tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock / 2)
+    # tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock / 2)
+    # tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock / 2)
     # tarrayl = max.(tarray_rock - pϵ_rock, 0.0)
     # tarrayu = min.(tarray_rock + pϵ_rock, 1.0)
-    # tarrayl = tarray_rock
-    # tarrayu = tarray_rock
+    tarrayl = tarray_rock
+    tarrayu = tarray_rock
     # tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock)
     # tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock)
-    oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock / 2)
-    oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock / 2)
+    # oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock / 2)
+    # oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock / 2)
     # oarrayl = max.(oarrayl - pϵ_rock, 0.0)
     # oarrayu = min.(oarrayu + pϵ_rock, 1.0)
     # oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock)
     # oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock)
-    for si = 1:length(states_rock), ai = 1:length(actions_rock)
-        if sum(tarrayl[si, ai, :]) >= 1.0
-            tarrayl[si, ai, :] = tarrayl[si, ai, :] * (1 - pϵ_rock) / sum(tarrayl[si, ai, :])
-        end
-    end
-    for ai = 1:length(actions_rock), spi = 1:length(states_rock)
-        if sum(oarrayl[ai, spi, :]) >= 1.0
-            oarrayl[ai, spi, :] = oarrayl[ai, spi, :] * (1 - pϵ_rock) / sum(oarrayl[ai, spi, :])
-        end
-    end
-    discount = discount_rock
+    # for si = 1:length(states_rock), ai = 1:length(actions_rock)
+    #     if sum(tarrayl[si, ai, :]) >= 1.0
+    #         tarrayl[si, ai, :] = tarrayl[si, ai, :] * (1 - pϵ_rock) / sum(tarrayl[si, ai, :])
+    #     end
+    # end
+    # for ai = 1:length(actions_rock), spi = 1:length(states_rock)
+    #     if sum(oarrayl[ai, spi, :]) >= 1.0
+    #         oarrayl[ai, spi, :] = oarrayl[ai, spi, :] * (1 - pϵ_rock) / sum(oarrayl[ai, spi, :])
+    #     end
+    # end
+    discount = disc
     RockRIPOMDP(tarrayl, tarrayu, oarrayl, oarrayu, alphas, discount, usize)
 end
-RockRIPOMDP(alphas::Vector{Vector{Float64}}) = RockRIPOMDP(alphas, 0.025)
-RockRIPOMDP(err::Float64) = RockRIPOMDP(inforeward_rock, err)
+RockRIPOMDP(alphas::Vector{Vector{Float64}}) = RockRIPOMDP(alphas, discount_rock, 0.025)
+RockRIPOMDP(err::Float64) = RockRIPOMDP(inforeward_rock, discount_rock, err)
+RockRIPOMDP(alphas::Vector{Vector{Float64}}, disc::Float64) = RockRIPOMDP(alphas, disc, 0.025)
+RockRIPOMDP(disc::Float64, err::Float64) = RockRIPOMDP(inforeward_rock, disc, err)
 RockRIPOMDP() = RockRIPOMDP(0.025)
 
 states(::Union{RockIPOMDP, RockRIPOMDP}) = states_rock

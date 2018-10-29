@@ -166,7 +166,7 @@ end
 end
 
 ip = RockIPOMDP()
-rip = RockRIPOMDP()
+rip = RockRIPOMDP(0.001)
 @test states(ip) == [10, 11, 20, 21]
 @test actions(ip) == [:left, :right, :check]
 @test observations(ip) == [:good, :bad, :none]
@@ -187,7 +187,7 @@ sp = 21
 @test observation(ip, a, sp, z) == 1.0
 @test transition(rip, s, a)[1][4] == 1.0
 @test transition(rip, s, a, sp) == (1.0, 1.0)
-@test all(dynamics(rip)[2] .> dynamics(rip)[1])
+@test all(dynamics(rip)[2] .>= dynamics(rip)[1])
 @test all(dynamics(rip)[2] .>= dynamics(ip))
 @test all(dynamics(ip) .>= dynamics(rip)[1])
 minimum(dynamics(rip)[2] - dynamics(ip))
@@ -206,23 +206,24 @@ rng = MersenneTwister(0)
 @test generate_sor(ip, b, s, a, rng) == (11, :bad, 0.6)
 @test generate_sor(rip, b, s, a, rng) == (11, :good, 0.6)
 
-nb = 20
+nb = 15
 srand(47329342)
 bs1 = [vcat(psample(zeros(2), ones(2)),zeros(2)) for i = 1:nb]
 bs2 = [vcat(zeros(2), psample(zeros(2), ones(2))) for i = 1:nb]
 bs = vcat(bs1, bs2)
 brand = rand() > 0.5 ? vcat(zeros(2), psample(zeros(2), ones(2))) :
     vcat(psample(zeros(2), ones(2)), zeros(2))
-@test minimum(norm(brand - bs[i]) for i=1:(2nb)) < 0.3
+minimum(norm(brand - bs[i]) for i=1:(2nb))
 
-maxiter = 100
-uncsize = 0.2
+maxiter = 50
+uncsize = 0.3
 solver = RPBVISolver(beliefpoints = bs, max_iterations = maxiter)
 Vold = fill(RPBVI.AlphaVec(zeros(n_states(rip)), ordered_actions(rip)[1]),
     length(solver.beliefpoints))
 Volda = [Vold[i].alpha for i = 1:length(Vold)]
 b = [0.620804, 0.379196, 0.0, 0.0]
-a = :left
+b = [0.0, 0.0, 0.5, 0.5]
+a = :check
 ai = action_index(ip, a)
 umin, pmin = RPBVI.minutil(rip, b, a, Volda)
 @test pmin[:,:,1] |> sum == 1.0
