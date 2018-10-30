@@ -57,7 +57,8 @@ e11 = zeros(nS_test); e11[1] = 1.0;
 const e1_test = copy(e11)        # intial state
 const b0_cyber_test = copy(e11)  # initial belief
 
-CyberTestIPOMDP(alphas) = CyberTestIPOMDP(discount_cyber_test, alphas, b0_cyber_test)
+CyberTestIPOMDP(alphas::Vector{Vector{Float64}}) = CyberTestIPOMDP(discount_cyber_test, alphas, b0_cyber_test)
+CyberTestIPOMDP(disc::Float64) = CyberTestIPOMDP(disc, inforeward_cyber_test, b0_cyber_test)
 CyberTestIPOMDP() = CyberTestIPOMDP(discount_cyber_test, inforeward_cyber_test, b0_cyber_test)
 
 states(::CyberTestIPOMDP) = states_cyber_test
@@ -86,8 +87,31 @@ const pi_test = 0.3 # prob of increase
 const psd_test = ps_test + pd_test # prob of decline or stay at lower border
 const psi_test = ps_test + pi_test # prob of stay or improve at upper border
 
+# calculate trasnsition matrix
+function calcTArray_test(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, par, delt)
+  ns = length(S)
+  na = length(A)
+  T = zeros(ns, na, ns)
+  Tl = zeros(ns, na, ns)
+  Tu = zeros(ns, na, ns)
+  for (si,s) in enumerate(S), (ji,j) in enumerate(S)
+      T[si,:,ji] = psj(s,j)
+      tl = psj(s,j,par,-delt)
+      tu = psj(s,j,par,delt)
+      # tl = max(tl, 0.0 + pϵ_cyber)
+      # tu = min(tu, 1.0 - pϵ_cyber)
+      (tu < tl) && (tu = tl + pϵ_cyber_test / 2)
+      Tl[si,:,ji] = tl
+      Tu[si,:,ji] = tu
+  end
+  for (si,s) in enumerate(S), (ai,a) in enumerate(A)
+    T[si,ai,:] = T[si,ai,:] ./ sum(T[si,ai,:])
+  end
+  T, Tl, Tu
+end
+
 # Nominal transition function array tarray_cyber[s,a,s'] = Pr(s' | s ,a)
-const tarray_cyber_test, tlarray_cyber_test, tuarray_cyber_test = calcTArray(states_cyber_test, actions_cyber_test, (pd_test,ps_test,pi_test), delt_test)
+const tarray_cyber_test, tlarray_cyber_test, tuarray_cyber_test = calcTArray_test(states_cyber_test, actions_cyber_test, (pd_test,ps_test,pi_test), delt_test)
 
 # Nominal transition function distributions
 const tdist_cyber_test = calcTDist(nS_test, nA_test, tarray_cyber_test)
@@ -103,6 +127,30 @@ const sensor_imprecision_test = [delo1_test, delo2_test]
 const acc1_test = 0.8 - delo1_test # likelihood of correct observation error for sensor 1 (off-nominal)
 const acc2_test = 0.9 - delo2_test # likelihood of correct observation error for sensor 2 (off-nominal)
 const sensor_accuracy_test = [acc1_test, acc2_test]
+
+function calcOArray_test(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, Z::Vector{Vector{Int}})
+  O = zeros(nA,nS,nZ)
+  Ol = zeros(nA,nS,nZ)
+  Ou = zeros(nA,nS,nZ)
+  for (spi,sp) in enumerate(S), (zi,z) in enumerate(Z), (ai,a) in enumerate(A)
+    O[ai, spi, zi] = o(a, sp, z, sensor_accuracy_test)
+    neg = o(a, sp, z, sensor_accuracy_test - sensor_imprecision_test)
+    pos = o(a, sp, z, sensor_accuracy_test + sensor_imprecision_test)
+    ol = min(neg, pos)
+    ou = max(neg, pos)
+    (ol < 0.0) && (ol = max(ol, 0.0 + pϵ_cyber_test))
+    (ou > 1.0) && (ou = min(ou, 1.0 + pϵ_cyber_test))
+    (ou < ol) && (ou = ol + pϵ_cyber_test / 2)
+    Ol[ai, spi, zi] = ol
+    Ou[ai, spi, zi] = ou
+  end
+  for (spi,sp) in enumerate(S), (ai,a) in enumerate(A)
+    O[ai, spi,:] = O[ai,spi,:] ./ sum(O[ai,spi,:])
+  end
+  O, Ol, Ou
+end
+
+const oarray_cyber_test, olarray_cyber_test, ouarray_cyber_test = calcOArray_test(states_cyber_test, actions_cyber_test, observations_cyber_test)
 
 # Nominal transition function distributions
 const odist_cyber_test = calcODist(nS_test, nA_test, oarray_cyber_test)

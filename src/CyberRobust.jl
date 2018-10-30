@@ -8,7 +8,6 @@ end
 
 struct CyberRPOMDP <: RPOMDP{Vector{Int}, Vector{Int}, Vector{Int}}
     discount::Float64
-    usize::Float64
     b0::Vector{Float64}
 end
 
@@ -20,7 +19,6 @@ end
 
 struct CyberRIPOMDP <: RIPOMDP{Vector{Int}, Vector{Int}, Vector{Int}}
     discount::Float64
-    usize::Float64
     inforeward::Vector{Vector{Float64}}
     b0::Vector{Float64}
 end
@@ -77,15 +75,16 @@ const b0_cyber = copy(e11)  # initial belief
 
 CyberPOMDP() = CyberPOMDP(discount_cyber, b0_cyber)
 
-CyberRPOMDP(err) = CyberRPOMDP(discount_cyber, err, b0_cyber)
-CyberRPOMDP() = CyberRPOMDP(discount_cyber, 0.4, b0_cyber)
+CyberRPOMDP(disc::Float64) = CyberRPOMDP(disc, b0_cyber)
+CyberRPOMDP() = CyberRPOMDP(discount_cyber, b0_cyber)
 
-CyberIPOMDP(alphas) = CyberIPOMDP(discount_cyber, alphas, b0_cyber)
+CyberIPOMDP(alphas::Vector{Vector{Float64}}) = CyberIPOMDP(discount_cyber, alphas, b0_cyber)
+CyberIPOMDP(disc::Float64) = CyberIPOMDP(disc, inforeward_cyber, b0_cyber)
 CyberIPOMDP() = CyberIPOMDP(discount_cyber, inforeward_cyber, b0_cyber)
 
-CyberRIPOMDP(err::Float64, alphas::Vector{Vector{Float64}}) = CyberRIPOMDP(discount_cyber, err, alphas, b0_cyber)
-CyberRIPOMDP(err::Float64) = CyberRIPOMDP(discount_cyber, err, inforeward_cyber, b0_cyber)
-CyberRIPOMDP() = CyberRIPOMDP(discount_cyber, 0.4, inforeward_cyber, b0_cyber)
+CyberRIPOMDP(disc::Float64, alphas::Vector{Vector{Float64}}) = CyberRIPOMDP(disc, alphas, b0_cyber)
+CyberRIPOMDP(disc::Float64) = CyberRIPOMDP(disc, inforeward_cyber, b0_cyber)
+CyberRIPOMDP() = CyberRIPOMDP(discount_cyber, inforeward_cyber, b0_cyber)
 
 states(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = states_cyber
 actions(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = actions_cyber
@@ -307,7 +306,6 @@ function calcOArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, Z::Vector{Ve
     pos = o(a, sp, z, sensor_accuracy + sensor_imprecision)
     ol = min(neg, pos)
     ou = max(neg, pos)
-    ((spi == 1) && (zi == 1) && (ai == 1)) && (println(ou))
     (ol < 0.0) && (ol = max(ol, 0.0 + pϵ_cyber))
     (ou > 1.0) && (ou = min(ou, 1.0 + pϵ_cyber))
     (ou < ol) && (ou = ol + pϵ_cyber / 2)
