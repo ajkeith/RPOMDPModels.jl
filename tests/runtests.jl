@@ -165,6 +165,22 @@ end
     @test value(polrip, [1.0, 0.0, 0.0, 0.0]) ≈ 19.8657 atol = 1e-3
 end
 
+
+
+
+
+######################
+#
+# Developmental Testing
+#
+#####################
+
+using Base.Test
+using RPOMDPs, RPOMDPModels
+using RobustValueIteration
+using SimpleProbabilitySets, RPOMDPToolbox, Distances
+const RPBVI = RobustValueIteration
+
 ip = RockIPOMDP()
 rip = RockRIPOMDP(0.001)
 @test states(ip) == [10, 11, 20, 21]

@@ -27,9 +27,9 @@ initial_state_distribution(::CyberTestIPOMDP) = SparseCat(states_cyber, e1_test)
 initial_belief(prob::CyberTestIPOMDP) = prob.b0
 
 # Transitions
-const pd_test = 0.05 # prob of decline
-const ps_test = 0.45 # prob of stay
-const pi_test = 0.5 # prob of improve
+const pd_test = 0.33 # prob of decline
+const ps_test = 0.34 # prob of stay
+const pi_test = 0.33 # prob of improve
 const psd_test = ps_test + pd_test # prob of decline or stay at lower border
 const psi_test = ps_test + pi_test # prob of stay or improve at upper border
 

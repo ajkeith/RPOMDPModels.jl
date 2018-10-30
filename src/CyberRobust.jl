@@ -107,9 +107,9 @@ initial_belief(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) 
 # Transitions
 const pϵ_cyber = 1e-6 # near-saturation bound
 const delt = 0.2 # imprecision
-const pd = 0.25 # prob of decline
-const ps = 0.45 # prob of stay
-const pi = 0.3 # prob of improve
+const pd = 0.21 # prob of decline
+const ps = 0.54 # prob of stay
+const pi = 0.25 # prob of improve
 const psd = ps + pd # prob of decline or stay at lower border
 const psi = ps + pi # prob of stay or improve at upper border
 
