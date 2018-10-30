@@ -137,7 +137,7 @@ end
     maxiter = 5
     solver = RPBVISolver(beliefpoints = bs, max_iterations = maxiter)
     polinit = RPBVI.create_policy(solver, ip)
-    polip = RPBVI.solve(solver, ip, verbose = true)
+    polip = RPBVI.solve(solver, ip, verbose = false)
     @test value(polip, b) > value(polinit, b)
 end
 
