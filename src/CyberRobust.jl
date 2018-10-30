@@ -44,12 +44,10 @@ const states_cyber = copy(S)
 
 # Action space
 const na = 2 # number of assessment assets
-const nA = nmoe ^ na # total number of actions
-A = Vector{Vector{Int}}(nA) # actions, as [asset_1_assignment, ...]
-ind = 1
+const nA = 6 # total number of actions
+A = Vector{Vector{Int}}() # actions, as [asset_1_assignment, ...]
 for i = 1:nmoe, j = 1:nmoe
-  A[ind] = [i,j]
-  ind += 1
+  (i != j) && (push!(A, [i,j]))
 end
 const actions_cyber = copy(A)
 
@@ -63,28 +61,31 @@ for i = 1:nlevels, j = 1:nlevels
 end
 const observations_cyber = copy(Z)
 
-bs = Vector{Vector{Float64}}(nS)
-bs[1] = vcat(1.0, fill(0.0, nS - 1))
-bs[nS] = vcat(fill(0.0, nS - 1), 1.0)
+# Belief reward (PWLC vectors: simple)
+br = Vector{Vector{Float64}}(nS)
+br[1] = vcat(1.0, fill(-1/(nS-1), nS - 1))
+br[nS] = vcat(fill(-1/(nS-1), nS - 1), 1.0)
 for i = 2:(nS-1)
-  bs[i] = vcat(fill(0.0, i - 1), 1.0, fill(0.0, nS - i))
+  br[i] = vcat(fill(-1/(nS-1), i - 1), 1.0, fill(-1/(nS-1), nS - i))
 end
-const inforeward_cyber = copy(bs)
-b01 = zeros(nS)
-b01[1] = 1.0
-const b0_cyber = copy(b01)
+const inforeward_cyber = copy(br)
+
+# Initial state and belief
+e11 = zeros(nS); e11[1] = 1.0;
+const e1 = copy(e11)        # intial state
+const b0_cyber = copy(e11)  # initial belief
 
 CyberPOMDP() = CyberPOMDP(discount_cyber, b0_cyber)
 
 CyberRPOMDP(err) = CyberRPOMDP(discount_cyber, err, b0_cyber)
-CyberRPOMDP() = CyberRPOMDP(discount_cyber, 0.025, b0_cyber)
+CyberRPOMDP() = CyberRPOMDP(discount_cyber, 0.4, b0_cyber)
 
 CyberIPOMDP(alphas) = CyberIPOMDP(discount_cyber, alphas, b0_cyber)
 CyberIPOMDP() = CyberIPOMDP(discount_cyber, inforeward_cyber, b0_cyber)
 
 CyberRIPOMDP(err::Float64, alphas::Vector{Vector{Float64}}) = CyberRIPOMDP(discount_cyber, err, alphas, b0_cyber)
 CyberRIPOMDP(err::Float64) = CyberRIPOMDP(discount_cyber, err, inforeward_cyber, b0_cyber)
-CyberRIPOMDP() = CyberRIPOMDP(discount_cyber, 0.025, inforeward_cyber, b0_cyber)
+CyberRIPOMDP() = CyberRIPOMDP(discount_cyber, 0.4, inforeward_cyber, b0_cyber)
 
 states(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = states_cyber
 actions(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = actions_cyber
@@ -99,17 +100,16 @@ action_index(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, a::Vec
 observation_index(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, z::Vector{Int}) = find(x -> x == z, observations_cyber)[1]
 obs_index(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}, z::Vector{Int}) = observation_index(prob, z)
 
-e11 = zeros(nS); e11[1] = 1.0;
-const e1 = copy(e11)
 initial_state_distribution(::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = SparseCat(states_cyber, e1)
 initial_belief(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = prob.b0
+initial_belief_distribution(prob::Union{CyberPOMDP, CyberRPOMDP, CyberIPOMDP, CyberRIPOMDP}) = SparseCat(states_cyber, initial_belief(prob))
 
 # Transitions
 const pϵ_cyber = 1e-6 # near-saturation bound
-const delt = 0.2 # imprecision
-const pd = 0.21 # prob of decline
-const ps = 0.54 # prob of stay
-const pi = 0.25 # prob of improve
+const delt = 0.01 # imprecision in transition distribution
+const pd = 0.15 # prob of decrease
+const ps = 0.55 # prob of stay
+const pi = 0.3 # prob of increase
 const psd = ps + pd # prob of decline or stay at lower border
 const psi = ps + pi # prob of stay or improve at upper border
 
@@ -126,7 +126,7 @@ function psj(s::Vector{Int},j::Vector{Int})
       elseif level_j == level_s + 1
         prob = prob * pi
       else # zero probability of skipping levels
-        return prob = pϵ_cyber
+        return prob = 0.0
       end
     elseif level_s == lmax # current state is highest level
       if level_j == level_s
@@ -134,7 +134,7 @@ function psj(s::Vector{Int},j::Vector{Int})
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        return prob = pϵ_cyber
+        return prob = 0.0
       end
     else # current state is an intermediate level
       if level_j == level_s
@@ -145,14 +145,15 @@ function psj(s::Vector{Int},j::Vector{Int})
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        return prob = pϵ_cyber
+        return prob = 0.0
       end
     end
   end
   prob
 end
 
-function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
+# robust transition function: probabilty of going from state s to state j
+function psj(s::Array{Int,1}, j::Array{Int,1}, par, delt)
   # add imprecision (one-sided)
   delt > 0 ? (pd,ps,pi) = min.(par .+ delt, 1 - pϵ_cyber) : (pd,ps,pi) = max.(par .+ delt, 0 + pϵ_cyber)
   psd = min(ps + pd, 1 - pϵ_cyber) # prob of decline or stay at lower border
@@ -167,7 +168,7 @@ function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
       elseif level_j == level_s + 1
         prob = prob * pi
       else # zero probability of skipping levels
-        return prob = pϵ_cyber
+        return prob = 0.0
       end
     elseif level_s == lmax # current state is highest level
       if level_j == level_s
@@ -175,7 +176,7 @@ function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        return prob = pϵ_cyber
+        return prob = 0.0
       end
     else # current state is an intermediate level
       if level_j == level_s
@@ -185,7 +186,7 @@ function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
       elseif level_j == level_s - 1
         prob = prob * pd
       else # zero probability of skipping levels
-        return prob = pϵ_cyber
+        return prob = 0.0
       end
     end
   end
@@ -193,7 +194,7 @@ function psj(s::Array{Int,1},j::Array{Int,1},par,delt)
 end
 
 # calculate trasnsition matrix
-function calcTArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}},par,delt)
+function calcTArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, par, delt)
   ns = length(S)
   na = length(A)
   T = zeros(ns, na, ns)
@@ -203,7 +204,9 @@ function calcTArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}},par,delt)
       T[si,:,ji] = psj(s,j)
       tl = psj(s,j,par,-delt)
       tu = psj(s,j,par,delt)
-      (tl == tu) && (tu = tu + pϵ_cyber)
+      # tl = max(tl, 0.0 + pϵ_cyber)
+      # tu = min(tu, 1.0 - pϵ_cyber)
+      (tu < tl) && (tu = tl + pϵ_cyber / 2)
       Tl[si,:,ji] = tl
       Tu[si,:,ji] = tu
   end
@@ -246,113 +249,68 @@ function transition(prob::Union{CyberRPOMDP, CyberRIPOMDP}, s::Vector{Int}, a::V
 end
 
 # Observation function
-
-const delo = 0.15 # imprecision
-const erro = 0.2 # likelihood of one-sided, one-level observation error
-const el = erro - delo
-const eu = erro + delo
-const parl = (el, el^2, 1 - eu, 1 - eu^2)
-const paru = (eu, eu^2, 1 - el, 1 - el^2)
-const par = (el,eu)
+const acc1 = 0.8 # likelihood of correct observation error for sensor 1
+const acc2 = 0.9 # likelihood of correct observation error for sensor 2
+const sensor_accuracy = [acc1, acc2]
+const delo1 = pϵ_cyber # sensor 1 immprecision
+const delo2 = 0.4 # sensor 2 imprecision
+const sensor_imprecision = [delo1, delo2]
 
 # observation function
-function o(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, eps::Float64)
-  prob = 1.0
-  for i = 1:nmoe
-    na = sum(a .== i) # total number of assets assigned to moe i
-    level_sp = sp[i]
-    (na > 0) && (level_z = z[find(a .== i)[1]])
-    if na == 0
-      nothing
-    else
-      any(z[a .== i] .!= level_z) && return prob = pϵ_cyber
-      if level_sp == lmin # current state is lowest level
-        if level_z == level_sp
-          prob = prob * (1 - (eps ^ na))
-        elseif level_z == level_sp + 1
-          prob = prob * (eps ^ na) # non-linear effect of multiple assets (i.e. if assets disagree, but one is right, the overall observaiton is right)
-        else # zero probability of error > 1
-          return prob = pϵ_cyber
-        end
-      elseif level_sp == lmax # current state is highest level
-        if level_z == level_sp
-          prob = prob * (1 - (eps ^ na))
-        elseif level_z == level_sp - 1
-          prob = prob * (eps ^ na)
-        else # zero probability of error > 1
-          return prob = pϵ_cyber
-        end
-      else # current state is an intermediate level
-        if level_z == level_sp
-          prob = prob * (1 - 2 * (eps ^ na))
-        elseif level_z == level_sp + 1
-          prob = prob * (eps ^ na)
-        elseif level_z == level_sp - 1
-          prob = prob * (eps ^ na)
-        else # zero probability of error > 1
-          return prob = pϵ_cyber
-        end
+function o(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, accvec::Vector{Float64})
+  pz = 1.0
+  nsensor = length(a)
+  for i = 1:nsensor
+    assingment_sensor = a[i]
+    level_sp = sp[assingment_sensor]
+    level_z = z[i]
+    pacc = accvec[i]
+    if level_sp == lmin # current state is lowest level
+      if level_z == level_sp
+        pz = pz * pacc
+      elseif level_z == level_sp + 1
+        pz = pz * (1 - pacc)
+      else # zero probability of error > 1
+        return pz = 0.0
+      end
+    elseif level_sp == lmax # current state is highest level
+      if level_z == level_sp
+        pz = pz * pacc
+      elseif level_z == level_sp - 1
+        pz = pz * (1 - pacc)
+      else # zero probability of error > 1
+        return pz = 0.0
+      end
+    else # current state is an intermediate level
+      if level_z == level_sp
+        pz = pz * pacc
+      elseif level_z == level_sp + 1
+        pz = pz * (1 - pacc) / 2
+      elseif level_z == level_sp - 1
+        pz = pz * (1 - pacc) / 2
+      else # zero probability of error > 1
+        return pz = 0.0
       end
     end
   end
-  return prob
-end
-
-function o(a::Vector{Int}, sp::Vector{Int}, z::Vector{Int}, par, del::Float64)
-  del > 0 ? (e1, e2) = par : (e2, e1) = par
-  prob = 1.0
-  for i = 1:nmoe
-    na = sum(a .== i) # total number of assets assigned to moe i
-    level_sp = sp[i]
-    (na > 0) && (level_z = z[find(a .== i)[1]])
-    if na == 0
-      nothing
-    else
-      any(z[a .== i] .!= level_z) && return prob = pϵ_cyber
-      if level_sp == lmin # current state is lowest level
-        if level_z == level_sp
-          prob = prob * (1 - (e1 ^ na))
-        elseif level_z == level_sp + 1
-          prob = prob * (e2 ^ na) # non-linear effect of multiple assets (i.e. if assets disagree, but one is right, the overall observaiton is right)
-        else # zero probability of error > 1
-          return prob = pϵ_cyber
-        end
-      elseif level_sp == lmax # current state is highest level
-        if level_z == level_sp
-          prob = prob * (1 - (e1 ^ na))
-        elseif level_z == level_sp - 1
-          prob = prob * (e2 ^ na)
-        else # zero probability of error > 1
-          return prob = pϵ_cyber
-        end
-      else # current state is an intermediate level
-        if level_z == level_sp
-          prob = prob * (1 - 2 * (e1 ^ na))
-        elseif level_z == level_sp + 1
-          prob = prob * (e2 ^ na)
-        elseif level_z == level_sp - 1
-          prob = prob * (e2 ^ na)
-        else # zero probability of error > 1
-          return prob = pϵ_cyber
-        end
-      end
-    end
-  end
-  return prob
+  return pz
 end
 
 # calculate trasnsition matrix
-function calcOArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, Z::Vector{Vector{Int}}, par::Tuple{Float64,Float64})
+function calcOArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, Z::Vector{Vector{Int}})
   O = zeros(nA,nS,nZ)
   Ol = zeros(nA,nS,nZ)
   Ou = zeros(nA,nS,nZ)
   for (spi,sp) in enumerate(S), (zi,z) in enumerate(Z), (ai,a) in enumerate(A)
-    O[ai, spi, zi] = o(a, sp, z, erro)
-    neg = o(a, sp, z, par, -delo)
-    pos = o(a, sp, z, par, delo)
+    O[ai, spi, zi] = o(a, sp, z, sensor_accuracy)
+    neg = o(a, sp, z, sensor_accuracy - sensor_imprecision)
+    pos = o(a, sp, z, sensor_accuracy + sensor_imprecision)
     ol = min(neg, pos)
     ou = max(neg, pos)
-    (ol == ou) && (ou = ou + pϵ_cyber)
+    ((spi == 1) && (zi == 1) && (ai == 1)) && (println(ou))
+    (ol < 0.0) && (ol = max(ol, 0.0 + pϵ_cyber))
+    (ou > 1.0) && (ou = min(ou, 1.0 + pϵ_cyber))
+    (ou < ol) && (ou = ol + pϵ_cyber / 2)
     Ol[ai, spi, zi] = ol
     Ou[ai, spi, zi] = ou
   end
@@ -362,7 +320,7 @@ function calcOArray(S::Vector{Vector{Int}}, A::Vector{Vector{Int}}, Z::Vector{Ve
   O, Ol, Ou
 end
 
-const oarray_cyber, olarray_cyber, ouarray_cyber = calcOArray(states_cyber, actions_cyber, observations_cyber, par)
+const oarray_cyber, olarray_cyber, ouarray_cyber = calcOArray(states_cyber, actions_cyber, observations_cyber)
 
 # calculate observation distribution
 function calcODist(ns::Int, na::Int, oarray::Array{Float64,3})
@@ -434,16 +392,10 @@ end
 
 function reward(prob::Union{CyberPOMDP, CyberRPOMDP}, s::Vector{Int}, a::Vector{Int})
   u = [0.5, 0.4, 0.1] # utility of each MOE
-  r = 0
-  for i = 1:nmoe
-    nassign = sum(a .== i) # total number of assets assigned to moe i
-    if s[i] == lmin
-      nassign > 0 ? r += u[i] * (1 - (erro ^ nassign)) : r += u[i] * psd
-    elseif s[i] == lmax
-      nassign > 0 ? r += u[i] * (1 - (erro ^ nassign)) : r += u[i] * psi
-    else
-      nassign > 0 ? r += u[i] * (1 - 2*(erro ^ nassign)) : r += u[i] * ps
-    end
+  r = 0.0
+  for i = 1:length(a)
+    pacc = sensor_accuracy[i]
+    r += u[a[i]] * pacc
   end
   r
 end

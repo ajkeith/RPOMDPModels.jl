@@ -64,21 +64,23 @@ end
     rp = CyberRPOMDP()
     rip = CyberRIPOMDP()
 
-    @test state_index(p, [2,3,2]) == 17
-    @test action_index(ip, [2,3]) == 6
+    @test state_index(p, [3,3,3]) == 27
+    @test action_index(ip, [2,3]) == 4
     @test observation_index(rp, [1,3]) == 3
     @test transition(ip, [1,1,1], [3,2]).probs |> sum ≈ 1.0
     @test transition(ip, [2,1,3], [3,2]).probs |> sum ≈ 1.0
-    @test all(transition(ip, [1,1,1], [3,2]).probs .== transition(ip, [1,1,1], [1,1]).probs)
-    @test transition(rp, [2,2,2], [1,3], [3,2,3])[2] ≈ 0.079625
-    @test RPOMDPModels.o([2,3], [1,3,1], [3,1], 0.1) == 0.81
-    @test observation(ip, [1,1], [1,1,1]).probs |> sum == 1
-    @test observation(rp, [1,1], [2,1,3])[1][1] ≈ 0.0025
-    @test dynamics(ip)[:,:,1,1] |> sum == 1
-    @test dynamics(ip)[10,9,1,1] ≈ 0.00147
-    @test dynamics(rip)[1][1,1,1,1] ≈ 0.21114
-    @test reward(rp, [1,3,2], [1,3]) ≈ 0.89
-    @test reward(rip, fill(1/27,27), [3,3]) ≈ 0.0370370370370
+    @test all(transition(ip, [1,1,2], [2,1]).probs .== transition(ip, [1,1,2], [1,2]).probs)
+    @test all(transition(ip, [1,1,2], [2,1]).probs .== transition(ip, [1,1,2], [1,3]).probs)
+    @test transition(rp, [2,2,2], [1,3], [3,2,3])[2] ≈ 0.053816
+    @test RPOMDPModels.o([1,2], [2,2,2], [1,1], [0.8, 0.9]) ≈ 0.005
+    @test observation(ip, [1,2], [1,1,1]).probs |> sum == 1.0
+    @test observation(rp, [1,2], [2,1,3])[1] |> sum < 1.0
+    @test dynamics(ip)[:,:,20,4] |> sum == 1
+    @test all(dynamics(rip)[2] .>= dynamics(rip)[1])
+    @test all(dynamics(rip)[2] .>= dynamics(ip))
+    @test all(dynamics(rip)[1] .<= dynamics(ip))
+    @test reward(rp, [1,3,2], [1,3]) ≈ 0.49
+    @test reward(rip, fill(1/27,27), [3,3]) ≈ 0.0 atol = 1e-9
     @test reward(rip, vcat(1.0, zeros(26)), [1,3]) == 1.0
 
     b = vcat([0.8, 0.2], zeros(25))
@@ -86,7 +88,57 @@ end
     a = [2,3]
     rng = MersenneTwister(20348)
     @test generate_sor(p, b, s, a, rng)[2] == [2,3]
-    @test generate_sor(rp, b, s, a, rng)[2] == [2,3]
+    @test generate_sor(rp, b, s, a, rng)[2] == [2,2]
+
+    nb = 5
+    srand(47329342)
+    bs = [psample(zeros(27), ones(27)) for i = 1:nb]
+
+    maxiter = 5
+    solver = RPBVISolver(beliefpoints = bs, max_iterations = maxiter)
+    Vold = fill(RPBVI.AlphaVec(zeros(n_states(rip)), ordered_actions(rip)[1]),
+        length(solver.beliefpoints))
+    Volda = [Vold[i].alpha for i = 1:length(Vold)]
+    e11 = zeros(27); e11[1] = 1.0;
+    b = e11
+    a = [1,2]
+    ai = action_index(ip, a)
+    umin, pmin = RPBVI.minutil(rip, b, a, Volda)
+    @test pmin[:,:,1] |> sum ≈ 1.0 atol = 1e-9
+    @test pmin[:,:,2] |> sum ≈ 1.0 atol = 1e-9
+    @test pmin[:,:,13] |> sum ≈ 1.0 atol = 1e-9
+    @test pmin[:,:,27] |> sum ≈ 1.0 atol = 1e-9
+end
+
+@testset "Cyber Assessment (Off Nominal)" begin
+    ip = CyberTestIPOMDP()
+    @test state_index(ip, [3,3,3]) == 27
+    @test action_index(ip, [2,3]) == 4
+    @test observation_index(ip, [1,3]) == 3
+    @test transition(ip, [1,1,1], [3,2]).probs |> sum ≈ 1.0
+    @test transition(ip, [2,1,3], [3,2]).probs |> sum ≈ 1.0
+    @test all(transition(ip, [1,1,2], [2,1]).probs .== transition(ip, [1,1,2], [1,2]).probs)
+    @test all(transition(ip, [1,1,2], [2,1]).probs .== transition(ip, [1,1,2], [1,3]).probs)
+    @test transition(ip, [2,2,2], [1,3], [3,2,3]) ≈ 0.0495
+    @test observation(ip, [1,2], [1,1,1]).probs |> sum == 1.0
+    @test dynamics(ip)[:,:,20,4] |> sum == 1
+    @test reward(ip, fill(1/27,27), [3,3]) ≈ 0.0 atol = 1e-9
+    @test reward(ip, vcat(1.0, zeros(26)), [1,3]) == 1.0
+
+    b = vcat([0.8, 0.2], zeros(25))
+    s = [1,2,3]
+    a = [2,3]
+    rng = MersenneTwister(20348)
+    @test generate_sor(ip, b, s, a, rng)[2] == [2,3]
+
+    nb = 5
+    srand(47329342)
+    bs = [psample(zeros(27), ones(27)) for i = 1:nb]
+    maxiter = 5
+    solver = RPBVISolver(beliefpoints = bs, max_iterations = maxiter)
+    polinit = RPBVI.create_policy(solver, ip)
+    polip = RPBVI.solve(solver, ip, verbose = true)
+    @test value(polip, b) > value(polinit, b)
 end
 
 @testset "Rock Diagnosis" begin
@@ -169,90 +221,46 @@ end
 
 
 
-######################
+# ######################
+# #
+# # Developmental Testing
+# #
+# #####################
 #
-# Developmental Testing
+# using Base.Test
+# using RPOMDPs, RPOMDPModels
+# using RobustValueIteration
+# using SimpleProbabilitySets, RPOMDPToolbox, Distances
+# const RPBVI = RobustValueIteration
 #
-#####################
-
-using Base.Test
-using RPOMDPs, RPOMDPModels
-using RobustValueIteration
-using SimpleProbabilitySets, RPOMDPToolbox, Distances
-const RPBVI = RobustValueIteration
-
-ip = RockIPOMDP()
-rip = RockRIPOMDP(0.001)
-@test states(ip) == [10, 11, 20, 21]
-@test actions(ip) == [:left, :right, :check]
-@test observations(ip) == [:good, :bad, :none]
-@test states(rip) == [10, 11, 20, 21]
-@test actions(rip) == [:left, :right, :check]
-@test observations(rip) == [:good, :bad, :none]
-@test state_index.(ip, states(ip)) == [1,2,3,4]
-@test action_index.(ip, actions(ip)) == [1,2,3]
-@test observation_index.(ip, observations(ip)) == [1,2,3]
-
-s = 11
-a = :right
-z = :none
-sp = 21
-@test pdf(transition(ip, s, a), sp) == 1.0
-@test transition(ip, s, a, sp) == 1.0
-@test pdf(observation(ip, a, sp), z) == 1.0
-@test observation(ip, a, sp, z) == 1.0
-@test transition(rip, s, a)[1][4] == 1.0
-@test transition(rip, s, a, sp) == (1.0, 1.0)
-@test all(dynamics(rip)[2] .>= dynamics(rip)[1])
-@test all(dynamics(rip)[2] .>= dynamics(ip))
-@test all(dynamics(ip) .>= dynamics(rip)[1])
-minimum(dynamics(rip)[2] - dynamics(ip))
-minimum(dynamics(ip) - dynamics(rip)[1])
-@test reward(ip, [0.5, 0.5, 0.0, 0.0], :left) ≈ 0.3333333 atol = 1e-5
-@test reward(rip, [0.5, 0.5, 0.0, 0.0], :left) ≈ 0.3333333 atol = 1e-5
-@test reward(ip, [1.0, 0.0, 0.0, 0.0], a) == 1.0
-@test reward(ip, [0.0, 1.0, 0.0, 0.0], a) == 1.0
-@test reward(ip, [0.0, 0.0, 1.0, 0.0], a) == 1.0
-@test reward(ip, [0.0, 0.0, 0.0, 1.0], a) == 1.0
-
-b = [0.7, 0.3, 0.0, 0.0]
-s = 11
-a = :check
-rng = MersenneTwister(0)
-@test generate_sor(ip, b, s, a, rng) == (11, :bad, 0.6)
-@test generate_sor(rip, b, s, a, rng) == (11, :good, 0.6)
-
-nb = 15
-srand(47329342)
-bs1 = [vcat(psample(zeros(2), ones(2)),zeros(2)) for i = 1:nb]
-bs2 = [vcat(zeros(2), psample(zeros(2), ones(2))) for i = 1:nb]
-bs = vcat(bs1, bs2)
-brand = rand() > 0.5 ? vcat(zeros(2), psample(zeros(2), ones(2))) :
-    vcat(psample(zeros(2), ones(2)), zeros(2))
-minimum(norm(brand - bs[i]) for i=1:(2nb))
-
-maxiter = 50
-uncsize = 0.3
-solver = RPBVISolver(beliefpoints = bs, max_iterations = maxiter)
-Vold = fill(RPBVI.AlphaVec(zeros(n_states(rip)), ordered_actions(rip)[1]),
-    length(solver.beliefpoints))
-Volda = [Vold[i].alpha for i = 1:length(Vold)]
-b = [0.620804, 0.379196, 0.0, 0.0]
-b = [0.0, 0.0, 0.5, 0.5]
-a = :check
-ai = action_index(ip, a)
-umin, pmin = RPBVI.minutil(rip, b, a, Volda)
-@test pmin[:,:,1] |> sum == 1.0
-@test pmin[:,:,2] |> sum == 1.0
-@test pmin[:,:,3] |> sum == 1.0
-@test pmin[:,:,4] |> sum == 1.0
-
-polinit = RPBVI.create_policy(solver, rip)
-polip = RPBVI.solve(solver, ip)
-polrip = RPBVI.solve(solver, rip)
-value(polip, [0.5, 0.5, 0.0, 0.0])
-value(polip, [1.0, 0.0, 0.0, 0.0])
-value(polinit, [0.5, 0.5, 0.0, 0.0])
-value(polinit, [1.0, 0.0, 0.0, 0.0])
-value(polrip, [0.5, 0.5, 0.0, 0.0])
-value(polrip, [1.0, 0.0, 0.0, 0.0])
+#
+# ip = CyberTestIPOMDP()
+#
+#
+# @test state_index(ip, [3,3,3]) == 27
+# @test action_index(ip, [2,3]) == 4
+# @test observation_index(ip, [1,3]) == 3
+# @test transition(ip, [1,1,1], [3,2]).probs |> sum ≈ 1.0
+# @test transition(ip, [2,1,3], [3,2]).probs |> sum ≈ 1.0
+# @test all(transition(ip, [1,1,2], [2,1]).probs .== transition(ip, [1,1,2], [1,2]).probs)
+# @test all(transition(ip, [1,1,2], [2,1]).probs .== transition(ip, [1,1,2], [1,3]).probs)
+# @test transition(ip, [2,2,2], [1,3], [3,2,3]) ≈ 0.0495
+# @test observation(ip, [1,2], [1,1,1]).probs |> sum == 1.0
+# @test dynamics(ip)[:,:,20,4] |> sum == 1
+# @test reward(ip, fill(1/27,27), [3,3]) ≈ 0.0 atol = 1e-9
+# @test reward(ip, vcat(1.0, zeros(26)), [1,3]) == 1.0
+#
+# b = vcat([0.8, 0.2], zeros(25))
+# s = [1,2,3]
+# a = [2,3]
+# rng = MersenneTwister(20348)
+# @test generate_sor(ip, b, s, a, rng)[2] == [2,3]
+#
+# nb = 5
+# srand(47329342)
+# bs = [psample(zeros(27), ones(27)) for i = 1:nb]
+# maxiter = 5
+# solver = RPBVISolver(beliefpoints = bs, max_iterations = maxiter)
+# polinit = RPBVI.create_policy(solver, ip)
+# polip = RPBVI.solve(solver, ip, verbose = true)
+# @test value(polip, b) > value(polinit, b)
