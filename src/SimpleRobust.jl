@@ -53,7 +53,6 @@ action_index(::Union{SimpleIPOMDP,SimpleRIPOMDP}, a::Symbol) = find(x -> x == a,
 observation_index(::Union{SimpleIPOMDP,SimpleRIPOMDP}, z::Symbol) = find(x -> x == z, observations_simple)[1]
 obs_index(prob::Union{SimpleIPOMDP,SimpleRIPOMDP}, z::Symbol) = observation_index(prob, z)
 
-# start knowing simple is not not hungry
 initial_state_distribution(::Union{SimpleIPOMDP,SimpleRIPOMDP}) = SparseCat([:left, :right], [1.0, 0.0])
 initial_belief(::Union{SimpleIPOMDP,SimpleRIPOMDP}) = [0.5, 0.5]
 
@@ -175,23 +174,6 @@ function transition(prob::SimpleRIPOMDP, s::Symbol, a::Symbol, sp::Symbol)
     end
 end
 
-# # Robust transitions
-# # P(z,t|s,a) = P(z|s,a,t)P(t|s,a)
-# # PztLower = PzLower * PtLower
-# # PtLower = Plower(t|s,a) = t_lower[s,a,sp]
-# function transition(prob::SimpleRIPOMDP, s::Symbol, a::Symbol)
-#     si, ai = state_index(prob, s), action_index(prob, a)
-#     plower = max.(tarray_simple[si,ai,:] - prob.usize, 0.0 + pϵ_simple)
-#     pupper = min.(tarray_simple[si,ai,:] + prob.usize, 1.0 - pϵ_simple)
-#     plower, pupper
-# end
-# function transition(prob::SimpleRIPOMDP, s::Symbol, a::Symbol, sp::Symbol)
-#     si, ai, spi = state_index(prob, s), action_index(prob, a), state_index(prob, sp)
-#     plower = max.(tarray_simple[si, ai, spi] - prob.usize, 0.0 + pϵ_simple)
-#     pupper = min.(tarray_simple[si, ai, spi] + prob.usize, 1.0 - pϵ_simple)
-#     plower, pupper
-# end
-
 function observation(prob::SimpleIPOMDP, a::Symbol, sp::Symbol)
     ps = prob.ps
     pb = prob.pb
@@ -249,23 +231,6 @@ function observation(prob::SimpleRIPOMDP, a::Symbol, sp::Symbol, z::Symbol)
     pupper = puold[zind]
     plower, pupper
 end
-
-# # Robust observations
-# # P(z,t|s,a) = P(z|s,a,t)P(t|s,a)
-# # PztLower = PzLower * PtLower
-# # PzLower = Plower(z|s,a,t) = o_lower[a,sp,z]
-# function observation(prob::SimpleRIPOMDP, a::Symbol, sp::Symbol)
-#     ai, spi = action_index(prob, a), state_index(prob, sp)
-#     plower = max.(oarray_simple[ai,spi,:] - prob.usize, 0.0 + pϵ_simple)
-#     pupper = min.(oarray_simple[ai,spi,:] + prob.usize, 1.0 - pϵ_simple)
-#     plower, pupper
-# end
-# function observation(prob::SimpleRIPOMDP, a::Symbol, sp::Symbol, z::Symbol)
-#     ai, spi, zi = action_index(prob, a), state_index(prob, sp), observation_index(prob, z)
-#     plower = max.(oarray_simple[ai, spi, zi] - prob.usize, 0.0 + pϵ_simple)
-#     pupper = min.(oarray_simple[ai, spi, zi] + prob.usize, 1.0 - pϵ_simple)
-#     plower, pupper
-# end
 
 function dynamics(prob::SimpleIPOMDP)
     ns = n_states(prob)
@@ -354,18 +319,3 @@ function generate_sor(prob::SimpleRIPOMDP, b, s, a, rng::AbstractRNG)
     r = reward(prob, b, s, a, sp)
     sp, o, r
 end
-#
-# # worst-case generate_sor
-# function generate_sor_worst(prob::SimpleRIPOMDP, b, s, a, rng::AbstractRNG, alphavecs)
-#     u, p = minutil(prob, b, a, alphavecs)
-#     sind = state_index(prob, s)
-#     tdist = SparseCat(states(prob), [sum(p[1,:,sind])/sum(p[:,:,sind]), sum(p[2,:,sind])/sum(p[:,:,sind])])
-#     sp = rand(rng, tdist)
-#     odenom = sum(p[:,:,sind])
-#     oarray = [sum(p[:,1,sind]), sum(p[:,1,sind]), sum(p[:,1,sind]),
-#                 sum(p[:,1,sind]), sum(p[:,1,sind]), sum(p[:,1,sind])] ./ odenom
-#     odist = SparseCat(observations(prob), oarray)
-#     o = rand(rng, odist)
-#     r = reward(prob, b, s, a, sp)
-#     sp, o, r
-# end

@@ -1,5 +1,5 @@
 # Rock Diagnosis
-# Araya-Lopez 2013 (Active Diagnosis Through Information-Lookahead Planning)
+# Based on Araya-Lopez 2013 (Active Diagnosis Through Information-Lookahead Planning)
 
 struct RockIPOMDP <: IPOMDP{Int, Symbol, Symbol}
     tdist::Array
@@ -114,34 +114,8 @@ RockIPOMDP() = RockIPOMDP(inforeward_rock)
 
 function RockRIPOMDP(alphas::Vector{Vector{Float64}}, disc::Float64, usize::Float64)
     oarrayl, oarrayu = buildor(oarray_rock, ps1, ps2, usize)
-    # tarrayl = max.(tarray_rock - usize, 0.0 + pϵ_rock)
-    # tarrayu = min.(tarray_rock + usize, 1.0 - pϵ_rock)
-    # oarrayl = max.(oarray_rock - usize, 0.0 + pϵ_rock)
-    # oarrayu = min.(oarray_rock + usize, 1.0 - pϵ_rock)
-    # tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock / 2)
-    # tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock / 2)
-    # tarrayl = max.(tarray_rock - pϵ_rock, 0.0)
-    # tarrayu = min.(tarray_rock + pϵ_rock, 1.0)
     tarrayl = tarray_rock
     tarrayu = tarray_rock
-    # tarrayl = max.(tarray_rock - pϵ_rock, 0.0 + pϵ_rock)
-    # tarrayu = min.(tarray_rock + pϵ_rock, 1.0 - pϵ_rock)
-    # oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock / 2)
-    # oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock / 2)
-    # oarrayl = max.(oarrayl - pϵ_rock, 0.0)
-    # oarrayu = min.(oarrayu + pϵ_rock, 1.0)
-    # oarrayl = max.(oarrayl - pϵ_rock, 0.0 + pϵ_rock)
-    # oarrayu = min.(oarrayu + pϵ_rock, 1.0 - pϵ_rock)
-    # for si = 1:length(states_rock), ai = 1:length(actions_rock)
-    #     if sum(tarrayl[si, ai, :]) >= 1.0
-    #         tarrayl[si, ai, :] = tarrayl[si, ai, :] * (1 - pϵ_rock) / sum(tarrayl[si, ai, :])
-    #     end
-    # end
-    # for ai = 1:length(actions_rock), spi = 1:length(states_rock)
-    #     if sum(oarrayl[ai, spi, :]) >= 1.0
-    #         oarrayl[ai, spi, :] = oarrayl[ai, spi, :] * (1 - pϵ_rock) / sum(oarrayl[ai, spi, :])
-    #     end
-    # end
     discount = disc
     RockRIPOMDP(tarrayl, tarrayu, oarrayl, oarrayu, alphas, discount, usize)
 end

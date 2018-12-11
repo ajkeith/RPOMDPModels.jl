@@ -1,4 +1,4 @@
-# Crying baby2 problem (Kochenderfer 2015)
+# Based on crying baby problem (Kochenderfer 2015)
 # POMDP, Robust POMDP, and Robust ρPOMDP formulations
 
 struct Baby2POMDP <: POMDP{Symbol, Symbol, Symbol}
@@ -62,7 +62,6 @@ action_index(::Union{Baby2POMDP, Baby2RPOMDP, Baby2IPOMDP, Baby2RIPOMDP}, a::Sym
 observation_index(::Union{Baby2POMDP, Baby2RPOMDP, Baby2IPOMDP, Baby2RIPOMDP}, z::Symbol) = z == :quiet ? 1 : 2
 obs_index(prob::Union{Baby2POMDP, Baby2RPOMDP, Baby2IPOMDP, Baby2RIPOMDP}, z::Symbol) = observation_index(prob, z)
 
-# start knowing baby2 is not not hungry
 initial_state_distribution(::Union{Baby2POMDP, Baby2RPOMDP, Baby2IPOMDP, Baby2RIPOMDP}) = SparseCat([:hungry, :full], [0.0, 1.0])
 initial_belief(::Union{Baby2POMDP, Baby2RPOMDP, Baby2IPOMDP, Baby2RIPOMDP}) = [0.0, 1.0]
 
@@ -102,7 +101,6 @@ const odist_baby2 = [SparseCat([:quiet, :crying], [0.2, 0.8])
 # Nominal observation function array oarray_baby2[a,sp,z] = Pr(z|a,sp)
 const oarray_baby2 = cat(3, [0.2 0.9; 0.2 0.9], [0.8 0.1; 0.8 0.1])
 
-# temporary decrease in observation capability to test robustness
 # const oarray_baby2 = cat(3, [0.3 0.7; 0.3 0.7], [0.7 0.3; 0.7 0.3])
 
 # Nominal observations

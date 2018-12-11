@@ -26,7 +26,6 @@ action_index(::SimpleBaby2RPOMDP, a::Symbol) = a == :feed ? 1 : 2
 observation_index(::SimpleBaby2RPOMDP, z::Symbol) = z == :quiet ? 1 : 2
 obs_index(prob::SimpleBaby2RPOMDP, z::Symbol) = observation_index(prob, z)
 
-# start knowing simplebaby2 is not not hungry
 initial_state_distribution(::SimpleBaby2RPOMDP) = SparseCat([:hungry, :full], [0.0, 1.0])
 initial_belief(::SimpleBaby2RPOMDP) = [0.0, 1.0]
 

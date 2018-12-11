@@ -1,4 +1,4 @@
-# Crying baby problem (Kochenderfer 2015)
+# Based on crying baby problem (Kochenderfer 2015)
 # POMDP, Robust POMDP, and Robust ρPOMDP formulations
 
 struct BabyPOMDP <: POMDP{Symbol, Symbol, Symbol}
@@ -62,7 +62,6 @@ action_index(::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}, a::Symbol)
 observation_index(::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}, z::Symbol) = z == :quiet ? 1 : z == :crying ? 2 : 3
 obs_index(prob::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}, z::Symbol) = observation_index(prob, z)
 
-# start knowing baby is not not hungry
 initial_state_distribution(::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}) = SparseCat([:hungry, :full], [0.0, 1.0])
 initial_belief(::Union{BabyPOMDP, BabyRPOMDP, BabyIPOMDP, BabyRIPOMDP}) = [0.0, 1.0]
 

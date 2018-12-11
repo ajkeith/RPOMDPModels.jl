@@ -1,5 +1,4 @@
-
-# Crying baby problem described in DMU book
+# Based on crying baby problem (Kochenderfer 2015)
 # State: hungry = true; not hungry = false
 # Action: feed = true; do nothing = false
 # Observation: crying = true; not crying = false
@@ -19,9 +18,6 @@ PBox(d::Distribution) = PBox(d,d) # degenerate PBox
 Baby3RrhoPOMDP(r_feed, r_hungry) = Baby3RrhoPOMDP(r_feed, r_hungry, 0.9)
 Baby3RrhoPOMDP() = Baby3RrhoPOMDP(-5.0, -10.0, 0.9)
 
-# updater(problem::Baby3RrhoPOMDP) = DiscreteUpdater(problem)
-
-# start knowing baby is not not hungry
 initial_state_distribution(::Baby3RrhoPOMDP) = BoolDistribution(0.0)
 
 const states_const = [true, false] # hungry, full
@@ -45,12 +41,6 @@ const t_array = [BoolDistribution(0.0) BoolDistribution(1.0);
 function transition(rpomdp::Baby3RrhoPOMDP, s::Bool, a::Bool)
     return t_array[state_index(rpomdp, s), action_index(rpomdp, a)]
 end
-
-# # observation data
-# const o_pbox = [[Categorical([0.15, 0.55, 0.3]) Categorical([0.8, 0.1, 0.1]);
-#     Categorical([0.15, 0.55, 0.3]) Categorical([0.8, 0.1, 0.1])],
-#     [Categorical([0.35, 0.6, 0.05]) Categorical([0.8, 0.1, 0.1]);
-#         Categorical([0.35, 0.6, 0.05]) Categorical([0.8, 0.1, 0.1])]]
 
 # pbox representation of obesrvation uncertainty
 const o_pbox = [PBox(Categorical([0.15, 0.55, 0.3]), Categorical([0.35, 0.6, 0.05])) PBox(Categorical([0.8, 0.1, 0.1]));
@@ -103,7 +93,6 @@ function pzainterval(rpomdp::Baby3RrhoPOMDP, a)
     pzl, pzu
 end
 
-# need to move this and other px functions to RPOMDPs or RPOMDPToolbox
 function pinterval(rpomdp::RPOMDP)
     ns = n_states(rpomdp)
     nz = n_observations(rpomdp)
@@ -157,25 +146,3 @@ function generate_o(p::Baby3RrhoPOMDP, s::Bool, rng::AbstractRNG, otype::String)
     d = observation(p, true, s, otype) # obs distribution not action dependant
     return observations[rand(rng, d)]
 end
-
-# # some example policies
-# mutable struct Starve <: Policy end
-# action{B}(::Starve, ::B) = false
-# updater(::Starve) = VoidUpdater()
-#
-# mutable struct AlwaysFeed <: Policy end
-# action{B}(::AlwaysFeed, ::B) = true
-# updater(::AlwaysFeed) = VoidUpdater()
-#
-# # feed when the previous observation was crying - this is nearly optimal
-# mutable struct FeedWhenCrying <: Policy end
-# updater(::FeedWhenCrying) = PreviousObservationUpdater{Bool}()
-# function action(::FeedWhenCrying, b::Nullable{Bool})
-#     if get(b, false) == false # not crying (or null)
-#         return false
-#     else # is crying
-#         return true
-#     end
-# end
-# action(::FeedWhenCrying, b::Bool) = b
-# action(p::FeedWhenCrying, b::Any) = action(p, initialize_belief(updater(p), b))

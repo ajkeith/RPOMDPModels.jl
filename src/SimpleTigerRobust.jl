@@ -27,7 +27,6 @@ action_index(::SimpleTigerRPOMDP, a::Symbol) = a == :listen ? 1 : a == :openleft
 observation_index(::SimpleTigerRPOMDP, z::Symbol) = z == :tigerleft ? 1 : 2
 obs_index(prob::SimpleTigerRPOMDP, z::Symbol) = observation_index(prob, z)
 
-# start knowing baby is not not hungry
 initial_state_distribution(::SimpleTigerRPOMDP) = SparseCat([:tigerleft, :tigerright], [0.5, 0.5])
 initial_belief(::SimpleTigerRPOMDP) = [0.5, 0.5]
 
