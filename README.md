@@ -11,7 +11,7 @@ Pkg.clone("https://github.com/ajkeith/RPOMDPModels.jl")
 
 ## Usage
 
-Use default problem implmentations or adjust parameters such as discount rate and ambiguity size.
+Use default problem implementations or adjust parameters such as discount rate and ambiguity size.
 
 ```julia
 using RPOMDPModels
